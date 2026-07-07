@@ -1,0 +1,32 @@
+{
+  "templates": [
+    {
+      "id": "pastel_red",
+      "name": "Pastel Red",
+      "dark": "#ff8585",
+      "light": "#ffedef",
+      "shadow": "#ff3131"
+    },
+    {
+      "id": "pastel_blue",
+      "name": "Pastel Blue",
+      "dark": null,
+      "light": null,
+      "shadow": null
+    },
+    {
+      "id": "pastel_green",
+      "name": "Pastel Green",
+      "dark": null,
+      "light": null,
+      "shadow": null
+    },
+    {
+      "id": "pastel_yellow",
+      "name": "Pastel Yellow",
+      "dark": null,
+      "light": null,
+      "shadow": null
+    }
+  ]
+}
