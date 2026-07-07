@@ -10,7 +10,7 @@ void main() {
     CardsRepository.instance.configureForTesting();
   });
 
-  ChoiceCard _testCard({
+  ChoiceCard testCard({
     required String id,
     required String folderId,
     required String itemId,
@@ -25,21 +25,21 @@ void main() {
 
   test('deleteFolder removes associated cards', () async {
     await CardsRepository.instance.addCard(
-      _testCard(
+      testCard(
         id: 'card_1',
         folderId: 'trip_to_japan',
         itemId: 'japan_eat',
       ),
     );
     await CardsRepository.instance.addCard(
-      _testCard(
+      testCard(
         id: 'card_2',
         folderId: 'trip_to_japan',
         itemId: 'japan_stay',
       ),
     );
     await CardsRepository.instance.addCard(
-      _testCard(
+      testCard(
         id: 'card_3',
         folderId: 'malaysia_eat',
         itemId: 'malaysia_state',
@@ -55,14 +55,14 @@ void main() {
 
   test('deleteItem removes associated cards only for that item', () async {
     await CardsRepository.instance.addCard(
-      _testCard(
+      testCard(
         id: 'card_1',
         folderId: 'trip_to_japan',
         itemId: 'japan_eat',
       ),
     );
     await CardsRepository.instance.addCard(
-      _testCard(
+      testCard(
         id: 'card_2',
         folderId: 'trip_to_japan',
         itemId: 'japan_stay',
@@ -81,7 +81,7 @@ void main() {
 
   test('deleteCard removes a single card', () async {
     await CardsRepository.instance.addCard(
-      _testCard(
+      testCard(
         id: 'card_1',
         folderId: 'trip_to_japan',
         itemId: 'japan_eat',

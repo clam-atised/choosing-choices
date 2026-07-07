@@ -41,15 +41,17 @@ class ExportService {
     required String fileName,
     required ExportFormat format,
   }) async {
-    await Share.shareXFiles(
-      [
+    await SharePlus.instance.share(
+     ShareParams(
+      files: [
         XFile.fromData(
           Uint8List.fromList(bytes),
           name: fileName,
-          mimeType: _mimeType(format),
+          mimeType: _mimeType(format)
         ),
       ],
       subject: fileName,
+     )
     );
   }
 

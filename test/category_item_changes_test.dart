@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:choices/data/folders_repository.dart';
-import 'package:choices/models/category_item.dart';
+// import 'package:choices/models/category_item.dart';
 import 'package:choices/screens/category_item_changes_screen.dart';
-import 'package:choices/widgets/choices_drawer.dart';
+// import 'package:choices/widgets/choices_drawer.dart';
 
 void main() {
   setUp(() {

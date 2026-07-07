@@ -39,7 +39,7 @@ class CategoryTreeView extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: folders.length,
-      onReorder: (oldIndex, newIndex) {
+      onReorderItem: (oldIndex, newIndex) {
         onReorder!(oldIndex, newIndex);
       },
       itemBuilder: (context, index) {

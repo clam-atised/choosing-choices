@@ -49,7 +49,7 @@ class ImageStorageService {
         AndroidUiSettings(
           toolbarTitle: 'Crop photo',
           lockAspectRatio: true,
-          initAspectRatio: CropAspectRatioPreset.ratio3x4,
+          initAspectRatio: CropAspectRatioPreset.ratio4x3,
         ),
         IOSUiSettings(
           title: 'Crop photo',

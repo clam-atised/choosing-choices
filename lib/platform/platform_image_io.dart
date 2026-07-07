@@ -16,7 +16,7 @@ Widget buildPlatformImage({
     fit: fit,
     width: width,
     height: height,
-    errorBuilder: (_, __, ___) =>
+    errorBuilder: (_, _, _) =>
         errorWidget ?? const ColoredBox(color: AppColours.light),
   );
 }
