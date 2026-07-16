@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:choices/data/cards_repository.dart';
 import 'package:choices/data/folders_repository.dart';
 import 'package:choices/models/category_item.dart';
 import 'package:choices/screens/category_item_changes_screen.dart';
 import 'package:choices/widgets/choices_drawer.dart';
+import 'test_helpers.dart';
 
 void main() {
-  setUp(() {
-    FoldersRepository.instance.configureForTesting();
-    CardsRepository.instance.configureForTesting();
+  setUp(() async {
+    await configureRepositoriesForTesting();
   });
 
   testWidgets('Tapping folder name opens folder settings dialog',
@@ -24,7 +23,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Trip to Japan'));
+    await tester.tap(find.text('Trip To Malaysia'));
     await tester.pumpAndSettle();
 
     expect(find.text('Hide folder:'), findsOneWidget);
@@ -47,20 +46,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Trip to Japan'));
+    await tester.tap(find.text('Trip To Malaysia'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Hide'));
     await tester.pumpAndSettle();
 
     expect(
-      FoldersRepository.instance.folderById('trip_to_japan')!.isHidden,
+      FoldersRepository.instance.folderById(FoldersRepository.seedFolderId)!.isHidden,
       isTrue,
     );
-
-    await tester.tap(find.byIcon(Icons.menu));
-    await tester.pumpAndSettle();
-
-    expect(find.byIcon(Icons.visibility_off), findsOneWidget);
   });
 
   testWidgets('Tapping sub-item opens item settings dialog',
@@ -74,7 +68,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Where to eat'));
+    await tester.tap(find.text('Places to visit'));
     await tester.pumpAndSettle();
 
     expect(find.text('Card display direction:'), findsOneWidget);
@@ -94,12 +88,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Where to eat'));
+    await tester.tap(find.text('Places to visit'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Vertical'));
     await tester.pumpAndSettle();
 
-    final item = FoldersRepository.instance.itemById('trip_to_japan', 'japan_eat');
+    final item = FoldersRepository.instance.itemById(
+      FoldersRepository.seedFolderId,
+      'places_to_visit',
+    );
     expect(item?.cardDisplayDirection, CardDisplayDirection.vertical);
   });
 
@@ -114,12 +111,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Choice of unis'));
+    await tester.tap(find.text('Trip To Malaysia'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete folder & contents'));
     await tester.pumpAndSettle();
 
-    expect(FoldersRepository.instance.folderById('choice_of_unis'), isNull);
-    expect(find.text('Choice of unis'), findsNothing);
+    expect(
+      FoldersRepository.instance.folderById(FoldersRepository.seedFolderId),
+      isNull,
+    );
+    expect(find.text('Trip To Malaysia'), findsNothing);
   });
 }

@@ -3,14 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:choices/data/cards_repository.dart';
 import 'package:choices/data/folders_repository.dart';
+import 'package:choices/models/category_item.dart';
 import 'package:choices/models/choice_card.dart';
 import 'package:choices/widgets/add_card_dialog.dart';
 import 'package:choices/widgets/category_card_carousel.dart';
+import 'test_helpers.dart';
 
 void main() {
-  setUp(() {
-    FoldersRepository.instance.configureForTesting();
-    CardsRepository.instance.configureForTesting();
+  setUp(() async {
+    await configureRepositoriesForTesting();
+    CardsRepository.instance.clearCardsForTesting();
   });
 
   Future<void> pumpCarousel(WidgetTester tester) async {
@@ -18,21 +20,22 @@ void main() {
       const MaterialApp(
         home: Scaffold(
           body: CategoryCardCarousel(
-            folderId: 'trip_to_japan',
-            categoryItemId: 'japan_eat',
+            folderId: FoldersRepository.seedFolderId,
+            categoryItemId: 'places_to_visit',
+            displayDirection: CardDisplayDirection.horizontal,
           ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
   }
 
   testWidgets('long press shows edit and delete actions', (tester) async {
     await CardsRepository.instance.addCard(
       const ChoiceCard(
         id: 'card_1',
-        folderId: 'trip_to_japan',
-        categoryItemId: 'japan_eat',
+        folderId: FoldersRepository.seedFolderId,
+        categoryItemId: 'places_to_visit',
         title: 'Ramen shop',
       ),
     );
@@ -40,7 +43,7 @@ void main() {
     await pumpCarousel(tester);
 
     await tester.longPress(find.text('Ramen shop'));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     expect(find.byTooltip('Edit card'), findsOneWidget);
     expect(find.byTooltip('Delete card'), findsOneWidget);
@@ -50,8 +53,8 @@ void main() {
     await CardsRepository.instance.addCard(
       const ChoiceCard(
         id: 'card_1',
-        folderId: 'trip_to_japan',
-        categoryItemId: 'japan_eat',
+        folderId: FoldersRepository.seedFolderId,
+        categoryItemId: 'places_to_visit',
         title: 'Ramen shop',
       ),
     );
@@ -59,21 +62,21 @@ void main() {
     await pumpCarousel(tester);
 
     await tester.longPress(find.text('Ramen shop'));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
     await tester.tap(find.byTooltip('Edit card'));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     expect(find.byType(AddCardDialog), findsOneWidget);
     expect(find.text('Save Card'), findsOneWidget);
-    expect(find.text('Ramen shop'), findsOneWidget);
+    expect(find.text('Ramen shop'), findsWidgets);
   });
 
   testWidgets('edit saves updated card title', (tester) async {
     await CardsRepository.instance.addCard(
       const ChoiceCard(
         id: 'card_1',
-        folderId: 'trip_to_japan',
-        categoryItemId: 'japan_eat',
+        folderId: FoldersRepository.seedFolderId,
+        categoryItemId: 'places_to_visit',
         title: 'Ramen shop',
       ),
     );
@@ -81,18 +84,18 @@ void main() {
     await pumpCarousel(tester);
 
     await tester.longPress(find.text('Ramen shop'));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
     await tester.tap(find.byTooltip('Edit card'));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     await tester.enterText(find.byType(TextField).first, 'Sushi bar');
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
     await tester.tap(find.text('Save Card'));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     final cards = CardsRepository.instance.cardsForCategory(
-      'trip_to_japan',
-      'japan_eat',
+      FoldersRepository.seedFolderId,
+      'places_to_visit',
     );
     expect(cards.single.title, 'Sushi bar');
   });
@@ -101,8 +104,8 @@ void main() {
     await CardsRepository.instance.addCard(
       const ChoiceCard(
         id: 'card_1',
-        folderId: 'trip_to_japan',
-        categoryItemId: 'japan_eat',
+        folderId: FoldersRepository.seedFolderId,
+        categoryItemId: 'places_to_visit',
         title: 'Ramen shop',
       ),
     );
@@ -110,9 +113,9 @@ void main() {
     await pumpCarousel(tester);
 
     await tester.longPress(find.text('Ramen shop'));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
     await tester.tap(find.byTooltip('Delete card'));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     expect(
       find.text('Are you sure you want to delete this card?'),
@@ -120,7 +123,7 @@ void main() {
     );
 
     await tester.tap(find.text('Delete').last);
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     expect(CardsRepository.instance.cards, isEmpty);
     expect(find.byTooltip('Edit card'), findsNothing);

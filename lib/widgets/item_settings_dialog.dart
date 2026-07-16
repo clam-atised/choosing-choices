@@ -5,9 +5,12 @@ import '../models/category_item.dart';
 import '../services/export_service.dart';
 import '../theme/app_colours.dart';
 import '../theme/app_text_styles.dart';
+import 'category_card_schema_editor.dart';
 import 'choices_dialog_shell.dart';
 import 'dialog_title_field.dart';
 import 'export_data_dropdown.dart';
+
+enum _ItemSettingsTab { category, card }
 
 class ItemSettingsDialog extends StatefulWidget {
   const ItemSettingsDialog({
@@ -25,6 +28,7 @@ class ItemSettingsDialog extends StatefulWidget {
 
 class _ItemSettingsDialogState extends State<ItemSettingsDialog> {
   final FoldersRepository _repository = FoldersRepository.instance;
+  _ItemSettingsTab _tab = _ItemSettingsTab.category;
 
   @override
   Widget build(BuildContext context) {
@@ -57,39 +61,147 @@ class _ItemSettingsDialogState extends State<ItemSettingsDialog> {
                 );
               },
             ),
-            const SizedBox(height: 20),
-            const ChoicesDialogSectionLabel(
-              label: 'Card display direction:',
+            const SizedBox(height: 16),
+            _ItemSettingsTabBar(
+              selected: _tab,
+              onChanged: (tab) => setState(() => _tab = tab),
             ),
-            _CardDirectionRadioGroup(
-              direction: item.cardDisplayDirection,
-              onChanged: (direction) {
-                _repository.setItemCardDirection(
-                  widget.folderId,
-                  widget.itemId,
-                  direction,
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            ExportDataDropdown(
-              onExport: (format) {
-                return ExportService.instance.exportItem(folder, item, format);
-              },
-            ),
-            const SizedBox(height: 12),
-            ChoicesDialogDeleteButton(
-              label: 'Delete item & contents',
-              onPressed: () async {
-                await _repository.deleteItem(widget.folderId, widget.itemId);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
+            const SizedBox(height: 16),
+            if (_tab == _ItemSettingsTab.category)
+              _CategorySettingsTab(
+                folder: folder,
+                item: item,
+                folderId: widget.folderId,
+                itemId: widget.itemId,
+              )
+            else
+              CategoryCardSchemaEditor(
+                folderId: widget.folderId,
+                itemId: widget.itemId,
+              ),
           ],
         );
       },
+    );
+  }
+}
+
+class _ItemSettingsTabBar extends StatelessWidget {
+  const _ItemSettingsTabBar({
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final _ItemSettingsTab selected;
+  final ValueChanged<_ItemSettingsTab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _TabLabel(
+          label: 'Category',
+          selected: selected == _ItemSettingsTab.category,
+          onTap: () => onChanged(_ItemSettingsTab.category),
+        ),
+        const SizedBox(width: 20),
+        _TabLabel(
+          label: 'Card',
+          selected: selected == _ItemSettingsTab.card,
+          onTap: () => onChanged(_ItemSettingsTab.card),
+        ),
+      ],
+    );
+  }
+}
+
+class _TabLabel extends StatelessWidget {
+  const _TabLabel({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.alice(
+              fontSize: 18,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            height: 2,
+            width: 56,
+            color: selected ? AppColours.dark : Colors.transparent,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategorySettingsTab extends StatelessWidget {
+  const _CategorySettingsTab({
+    required this.folder,
+    required this.item,
+    required this.folderId,
+    required this.itemId,
+  });
+
+  final Folder folder;
+  final CategoryItem item;
+  final String folderId;
+  final String itemId;
+
+  @override
+  Widget build(BuildContext context) {
+    final repository = FoldersRepository.instance;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const ChoicesDialogSectionLabel(
+          label: 'Card display direction:',
+        ),
+        _CardDirectionRadioGroup(
+          direction: item.cardDisplayDirection,
+          onChanged: (direction) {
+            repository.setItemCardDirection(
+              folderId,
+              itemId,
+              direction,
+            );
+          },
+        ),
+        const SizedBox(height: 20),
+        ExportDataDropdown(
+          onExport: (format) {
+            return ExportService.instance.exportItem(folder, item, format);
+          },
+        ),
+        const SizedBox(height: 12),
+        ChoicesDialogDeleteButton(
+          label: 'Delete item & contents',
+          onPressed: () async {
+            await repository.deleteItem(folderId, itemId);
+            if (context.mounted) {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
+      ],
     );
   }
 }
@@ -148,6 +260,7 @@ Future<void> showItemSettingsDialog(
 }) {
   return showChoicesDialog(
     context: context,
+    scrollable: true,
     child: ItemSettingsDialog(
       folderId: folderId,
       itemId: itemId,

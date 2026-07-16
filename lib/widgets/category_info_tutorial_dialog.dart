@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../data/colour_templates_repository.dart';
 import '../theme/app_colours.dart';
 import '../theme/app_text_styles.dart';
+
+const _tutorialCardWidth = 320.0;
+const _tutorialIllustrationHeight = 180.0;
+const _tutorialCardRadius = 16.0;
+
+const _tutorialStepAssets = [
+  'assets/tutorial/tutorial_step_1.png',
+  'assets/tutorial/tutorial_step_2.png',
+  'assets/tutorial/tutorial_step_3.png',
+];
 
 const _tutorialSteps = [
   'Long press on folder icon to move folder arrangement',
@@ -22,6 +31,8 @@ Future<void> showCategoryInfoTutorial(BuildContext context) {
 class CategoryInfoTutorialDialog extends StatefulWidget {
   const CategoryInfoTutorialDialog({super.key});
 
+  static const cardWidth = _tutorialCardWidth;
+
   @override
   State<CategoryInfoTutorialDialog> createState() =>
       _CategoryInfoTutorialDialogState();
@@ -30,19 +41,13 @@ class CategoryInfoTutorialDialog extends StatefulWidget {
 class _CategoryInfoTutorialDialogState extends State<CategoryInfoTutorialDialog> {
   int _currentPage = 0;
   bool _lastPageSeen = false;
-  Color _panelColour = AppColours.dark;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadPanelColour();
-  }
-
-  Future<void> _loadPanelColour() async {
-    final colour =
-        await ColourTemplatesRepository.instance.activeDarkColour();
-    if (mounted) {
-      setState(() => _panelColour = colour);
+  void _goBack() {
+    if (_currentPage > 0) {
+      setState(() {
+        _currentPage--;
+        _lastPageSeen = false;
+      });
     }
   }
 
@@ -62,51 +67,49 @@ class _CategoryInfoTutorialDialogState extends State<CategoryInfoTutorialDialog>
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width * 0.85;
-
-    return GestureDetector(
-      onTap: _advance,
-      behavior: HitTestBehavior.opaque,
-      child: Material(
-        color: Colors.transparent,
-        child: Center(
-          child: SizedBox(
-            width: width,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 180,
-                    width: double.infinity,
-                    child: ColoredBox(
-                      color: _panelColour,
-                      child: _TutorialIllustration(page: _currentPage),
-                    ),
+    return Material(
+      color: Colors.transparent,
+      child: Center(
+        child: SizedBox(
+          width: _tutorialCardWidth,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(_tutorialCardRadius),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: _tutorialIllustrationHeight,
+                  width: _tutorialCardWidth,
+                  child: ColoredBox(
+                    color: AppColours.dark,
+                    child: _TutorialIllustration(page: _currentPage),
                   ),
-                  ColoredBox(
-                    color: AppColours.light,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-                      child: Column(
-                        children: [
-                          Text(
-                            _tutorialSteps[_currentPage],
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.alice(
-                              fontSize: 16,
-                              color: AppColours.dark,
-                            ),
+                ),
+                ColoredBox(
+                  color: AppColours.light,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                    child: Column(
+                      children: [
+                        Text(
+                          _tutorialSteps[_currentPage],
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.alice(
+                            fontSize: 16,
+                            color: AppColours.dark,
                           ),
-                          const SizedBox(height: 20),
-                          _PageIndicator(currentPage: _currentPage),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 20),
+                        _TutorialNavigation(
+                          currentPage: _currentPage,
+                          onBack: _goBack,
+                          onForward: _advance,
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -115,29 +118,52 @@ class _CategoryInfoTutorialDialogState extends State<CategoryInfoTutorialDialog>
   }
 }
 
-class _PageIndicator extends StatelessWidget {
-  const _PageIndicator({required this.currentPage});
+class _TutorialNavigation extends StatelessWidget {
+  const _TutorialNavigation({
+    required this.currentPage,
+    required this.onBack,
+    required this.onForward,
+  });
 
   final int currentPage;
+  final VoidCallback onBack;
+  final VoidCallback onForward;
 
   @override
   Widget build(BuildContext context) {
+    final canGoBack = currentPage > 0;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
-        final isActive = index == currentPage;
-        return Container(
-          width: isActive ? 10 : 8,
-          height: isActive ? 10 : 8,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isActive
+      children: [
+        IconButton(
+          onPressed: canGoBack ? onBack : null,
+          icon: Icon(
+            Icons.chevron_left,
+            color: canGoBack
                 ? AppColours.dark
                 : AppColours.dark.withValues(alpha: 0.35),
           ),
-        );
-      }),
+        ),
+        ...List.generate(3, (index) {
+          final isActive = index == currentPage;
+          return Container(
+            width: isActive ? 10 : 8,
+            height: isActive ? 10 : 8,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isActive
+                  ? AppColours.dark
+                  : AppColours.dark.withValues(alpha: 0.35),
+            ),
+          );
+        }),
+        IconButton(
+          onPressed: onForward,
+          icon: Icon(Icons.chevron_right, color: AppColours.dark),
+        ),
+      ],
     );
   }
 }
@@ -149,274 +175,10 @@ class _TutorialIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return switch (page) {
-      0 => const _StepOneIllustration(),
-      1 => const _StepTwoIllustration(),
-      _ => const _StepThreeIllustration(),
-    };
-  }
-}
-
-class _StepOneIllustration extends StatelessWidget {
-  const _StepOneIllustration();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Positioned(
-          left: 48,
-          top: 36,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      const Icon(Icons.folder, color: AppColours.white, size: 40),
-                      const Positioned(
-                        left: -14,
-                        top: -10,
-                        child: _SparkleLines(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  const SizedBox(
-                    width: 2,
-                    height: 48,
-                    child: CustomPaint(
-                      painter: _DashedVerticalLinePainter(),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 12),
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Fol',
-                  style: AppTextStyles.alice(
-                    fontSize: 36,
-                    color: AppColours.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return Image.asset(
+      _tutorialStepAssets[page],
+      fit: BoxFit.contain,
+      alignment: Alignment.centerLeft,
     );
   }
-}
-
-class _StepTwoIllustration extends StatelessWidget {
-  const _StepTwoIllustration();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.folder, color: AppColours.white, size: 36),
-                const Positioned(
-                  left: -12,
-                  top: -8,
-                  child: _SparkleLines(),
-                ),
-              ],
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Folder',
-              style: AppTextStyles.alice(
-                fontSize: 40,
-                color: AppColours.white,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _StepThreeIllustration extends StatelessWidget {
-  const _StepThreeIllustration();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Column(
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.folder, color: AppColours.white, size: 28),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Folder',
-                    style: AppTextStyles.alice(
-                      fontSize: 28,
-                      color: AppColours.white,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: 60,
-                height: 36,
-                child: CustomPaint(
-                  painter: _DashedBranchPainter(),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 8),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 44),
-                child: Text(
-                  'Item',
-                  style: AppTextStyles.alice(
-                    fontSize: 28,
-                    color: AppColours.white,
-                  ),
-                ),
-              ),
-              const Positioned(
-                left: 40,
-                top: 28,
-                child: _SparkleLines(),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SparkleLines extends StatelessWidget {
-  const _SparkleLines();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 20,
-      height: 20,
-      child: CustomPaint(
-        painter: _SparkleLinesPainter(),
-      ),
-    );
-  }
-}
-
-class _SparkleLinesPainter extends CustomPainter {
-  const _SparkleLinesPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColours.white
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawLine(Offset(size.width * 0.8, 0), Offset(0, size.height * 0.5), paint);
-    canvas.drawLine(Offset(size.width, size.height * 0.3), Offset(size.width * 0.2, size.height), paint);
-    canvas.drawLine(Offset(size.width * 0.5, 0), Offset(size.width * 0.1, size.height * 0.7), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _DashedVerticalLinePainter extends CustomPainter {
-  const _DashedVerticalLinePainter();
-
-  static const double _dashLength = 4;
-  static const double _dashGap = 3;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColours.white
-      ..strokeWidth = 1;
-
-    var y = 0.0;
-    while (y < size.height) {
-      final endY = (y + _dashLength).clamp(0.0, size.height);
-      canvas.drawLine(Offset(size.width / 2, y), Offset(size.width / 2, endY), paint);
-      y += _dashLength + _dashGap;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _DashedBranchPainter extends CustomPainter {
-  const _DashedBranchPainter();
-
-  static const double _dashLength = 4;
-  static const double _dashGap = 3;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColours.white
-      ..strokeWidth = 1;
-
-    _drawDashedLine(
-      canvas,
-      paint,
-      const Offset(10, 0),
-      Offset(10, size.height * 0.55),
-    );
-    _drawDashedLine(
-      canvas,
-      paint,
-      Offset(10, size.height * 0.55),
-      Offset(size.width, size.height * 0.55),
-    );
-  }
-
-  void _drawDashedLine(Canvas canvas, Paint paint, Offset start, Offset end) {
-    final direction = end - start;
-    final totalLength = direction.distance;
-    if (totalLength == 0) {
-      return;
-    }
-
-    final unit = direction / totalLength;
-    var distance = 0.0;
-
-    while (distance < totalLength) {
-      final dashEnd = (distance + _dashLength).clamp(0.0, totalLength);
-      canvas.drawLine(
-        start + unit * distance,
-        start + unit * dashEnd,
-        paint,
-      );
-      distance += _dashLength + _dashGap;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

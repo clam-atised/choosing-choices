@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../platform/file_storage.dart';
+import '../theme/layout_constants.dart';
 
 class ImageStorageService {
   ImageStorageService._();
@@ -49,17 +50,13 @@ class ImageStorageService {
         AndroidUiSettings(
           toolbarTitle: 'Crop photo',
           lockAspectRatio: true,
-          initAspectRatio: CropAspectRatioPreset.ratio4x3,
+          showCropGrid: true,
         ),
         IOSUiSettings(
           title: 'Crop photo',
           aspectRatioLockEnabled: true,
         ),
-        if (context.mounted)
-          WebUiSettings(
-            context: context,
-            initialAspectRatio: 3 / 4,
-          ),
+        if (context.mounted) _buildWebCropUiSettings(context),
       ],
     );
 
@@ -80,6 +77,42 @@ class ImageStorageService {
     }
 
     await deleteFileIfExists(path);
+  }
+
+  WebUiSettings _buildWebCropUiSettings(BuildContext context) {
+    final mediaSize = MediaQuery.sizeOf(context);
+    const dialogChromeHeight = 220.0;
+    const pageChromeHeight = 184.0;
+    const horizontalInset = 48.0;
+
+    final usePageStyle =
+        !isPhoneSize(context) || mediaSize.height < 680;
+
+    final chromeHeight =
+        usePageStyle ? pageChromeHeight : dialogChromeHeight;
+    final cropperHeight = (mediaSize.height - chromeHeight)
+        .clamp(280, 900)
+        .toInt();
+    final cropperWidth = (mediaSize.width - horizontalInset)
+        .clamp(280, 900)
+        .toInt();
+
+    return WebUiSettings(
+      context: context,
+      initialAspectRatio: 3 / 4,
+      presentStyle:
+          usePageStyle ? WebPresentStyle.page : WebPresentStyle.dialog,
+      viewwMode: WebViewMode.mode_3,
+      guides: true,
+      cropBoxMovable: true,
+      cropBoxResizable: true,
+      highlight: true,
+      modal: true,
+      size: CropperSize(
+        width: cropperWidth,
+        height: cropperHeight,
+      ),
+    );
   }
 
   Future<ImageSource?> _pickImageSource(BuildContext context) async {

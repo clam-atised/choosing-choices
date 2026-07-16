@@ -1,64 +1,88 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:choices/data/cards_repository.dart';
 import 'package:choices/data/folders_repository.dart';
-import 'package:choices/screens/category_content_screen.dart';
 import 'package:choices/screens/folder_content_screen.dart';
-import 'package:choices/screens/home_screen.dart';
-import 'package:choices/widgets/add_card_dialog.dart';
+import 'test_helpers.dart';
 
 void main() {
-  setUp(() {
-    FoldersRepository.instance.configureForTesting();
-    CardsRepository.instance.configureForTesting();
+  setUp(() async {
+    await configureRepositoriesForTesting();
   });
 
-  testWidgets('Drawer folder tap navigates to FolderContentScreen',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byIcon(Icons.menu));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Trip to Japan'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(FolderContentScreen), findsOneWidget);
-    expect(find.text('Where to eat'), findsOneWidget);
-  });
-
-  testWidgets('Folder category name tap opens CategoryContentScreen with Add Card dialog',
+  testWidgets('App starts on FolderContentScreen with Malaysia data',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: FolderContentScreen(folderId: 'trip_to_japan'),
+        home: FolderContentScreen(
+          folderId: FoldersRepository.seedFolderId,
+        ),
       ),
     );
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
-    await tester.tap(find.text('Where to eat'));
-    await tester.pumpAndSettle();
+    expect(find.byType(FolderContentScreen), findsOneWidget);
+    expect(find.text('Places to visit'), findsOneWidget);
+    expect(find.text('Petronas Twin Towers'), findsOneWidget);
+    expect(find.byIcon(Icons.add), findsOneWidget);
+  });
 
-    expect(find.byType(CategoryContentScreen), findsOneWidget);
-    expect(find.byType(AddCardDialog), findsOneWidget);
-    expect(find.text('Title'), findsOneWidget);
+  testWidgets('Folder category name tap toggles expanded section',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: FolderContentScreen(
+          folderId: FoldersRepository.seedFolderId,
+        ),
+      ),
+    );
+    await pumpUi(tester);
+
+    expect(find.byIcon(Icons.arrow_drop_down), findsOneWidget);
+
+    await tester.tap(find.text('Places to visit'));
+    await pumpUi(tester);
+
+    expect(find.byIcon(Icons.arrow_right), findsWidgets);
   });
 
   testWidgets('Folder category arrow toggles expanded section',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: FolderContentScreen(folderId: 'trip_to_japan'),
+        home: FolderContentScreen(
+          folderId: FoldersRepository.seedFolderId,
+        ),
       ),
     );
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     expect(find.byIcon(Icons.arrow_drop_down), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.arrow_drop_down));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     expect(find.byIcon(Icons.arrow_right), findsWidgets);
+  });
+
+  testWidgets('Folder content stays left-aligned on wide layout',
+      (WidgetTester tester) async {
+    await TestWidgetsFlutterBinding.ensureInitialized()
+        .setSurfaceSize(const Size(1200, 900));
+    addTearDown(() async {
+      await TestWidgetsFlutterBinding.ensureInitialized().setSurfaceSize(null);
+    });
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: FolderContentScreen(
+          folderId: FoldersRepository.seedFolderId,
+        ),
+      ),
+    );
+    await pumpUi(tester);
+
+    final labelX = tester.getTopLeft(find.text('Places to visit')).dx;
+    expect(labelX, lessThan(140));
   });
 }

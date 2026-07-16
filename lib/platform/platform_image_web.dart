@@ -9,12 +9,23 @@ Widget buildPlatformImage({
   double? height,
   Widget? errorWidget,
 }) {
+  if (path.startsWith('assets/')) {
+    return Image.asset(
+      path,
+      fit: fit,
+      width: width,
+      height: height,
+      errorBuilder: (_, _, _) =>
+          errorWidget ?? ColoredBox(color: AppColours.light),
+    );
+  }
+
   return Image.network(
     path,
     fit: fit,
     width: width,
     height: height,
     errorBuilder: (_, _, _) =>
-        errorWidget ?? const ColoredBox(color: AppColours.light),
+        errorWidget ?? ColoredBox(color: AppColours.light),
   );
 }

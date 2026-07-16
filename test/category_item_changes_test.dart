@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:choices/data/folders_repository.dart';
-// import 'package:choices/models/category_item.dart';
 import 'package:choices/screens/category_item_changes_screen.dart';
-// import 'package:choices/widgets/choices_drawer.dart';
+import 'test_helpers.dart';
 
 void main() {
-  setUp(() {
-    FoldersRepository.instance.configureForTesting();
+  setUp(() async {
+    await configureRepositoriesForTesting();
   });
 
-  testWidgets('Category item changes screen shows hardcoded tree content',
+  testWidgets('Category item changes screen shows seed tree content',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -22,10 +21,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Trip to Japan'), findsOneWidget);
-    expect(find.text('Where to eat in Malaysia'), findsOneWidget);
-    expect(find.text('Choice of unis'), findsOneWidget);
-    expect(find.text('Where to eat'), findsOneWidget);
+    expect(find.text('Trip To Malaysia'), findsOneWidget);
+    expect(find.text('Places to visit'), findsOneWidget);
+    expect(find.text('Restaurant recommendations'), findsOneWidget);
+    expect(find.text('Activities'), findsOneWidget);
     expect(find.byIcon(Icons.info_outline), findsOneWidget);
   });
 
@@ -34,15 +33,14 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: CategoryItemChangesScreen(
-          filter: CategoryFilter.folder('trip_to_japan'),
+          filter: CategoryFilter.folder(FoldersRepository.seedFolderId),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Trip to Japan'), findsOneWidget);
-    expect(find.text('Where to eat'), findsOneWidget);
-    expect(find.text('Where to eat in Malaysia'), findsNothing);
-    expect(find.text('Choice of unis'), findsNothing);
+    expect(find.text('Trip To Malaysia'), findsOneWidget);
+    expect(find.text('Places to visit'), findsOneWidget);
+    expect(find.text('Restaurant recommendations'), findsOneWidget);
   });
 }

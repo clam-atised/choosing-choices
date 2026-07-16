@@ -19,11 +19,15 @@ class DialogTitleField extends StatefulWidget {
 
 class _DialogTitleFieldState extends State<DialogTitleField> {
   late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+  late String _lastCommitted;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialValue);
+    _lastCommitted = widget.initialValue.trim();
+    _focusNode = FocusNode()..addListener(_onFocusChange);
   }
 
   @override
@@ -32,13 +36,32 @@ class _DialogTitleFieldState extends State<DialogTitleField> {
     if (oldWidget.initialValue != widget.initialValue &&
         _controller.text != widget.initialValue) {
       _controller.text = widget.initialValue;
+      _lastCommitted = widget.initialValue.trim();
     }
   }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _commitIfChanged();
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus) {
+      _commitIfChanged();
+    }
+  }
+
+  void _commitIfChanged() {
+    final value = _controller.text.trim();
+    if (value.isEmpty || value == _lastCommitted) {
+      return;
+    }
+    _lastCommitted = value;
+    widget.onSubmitted(value);
   }
 
   @override
@@ -54,16 +77,19 @@ class _DialogTitleFieldState extends State<DialogTitleField> {
           Expanded(
             child: TextField(
               controller: _controller,
+              focusNode: _focusNode,
               style: AppTextStyles.alice(fontSize: 18),
               decoration: const InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
-              onSubmitted: widget.onSubmitted,
+              textInputAction: TextInputAction.done,
+              onEditingComplete: _commitIfChanged,
+              onSubmitted: (_) => _commitIfChanged(),
             ),
           ),
-          const Icon(Icons.edit_outlined, color: AppColours.dark, size: 18),
+          Icon(Icons.edit_outlined, color: AppColours.dark, size: 18),
         ],
       ),
     );

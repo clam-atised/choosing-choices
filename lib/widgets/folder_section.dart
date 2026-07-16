@@ -40,6 +40,8 @@ class FolderSection extends StatelessWidget {
                   ),
                   child: Text(
                     folder.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.alice(
                       fontSize: 18,
                       color: AppColours.white,
@@ -76,6 +78,8 @@ class FolderSection extends StatelessWidget {
                                 ),
                                 child: Text(
                                   item.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: AppTextStyles.alice(
                                     fontSize: 18,
                                     color: AppColours.white,

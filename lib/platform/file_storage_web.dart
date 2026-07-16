@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:path_provider/path_provider.dart';
 
 Future<String> documentsFilePath(String fileName) async {
@@ -8,6 +10,10 @@ Future<String> documentsFilePath(String fileName) async {
 Future<bool> fileExists(String path) async => false;
 
 Future<String> readFileAsString(String path) async {
+  throw UnsupportedError('File storage is not supported on web');
+}
+
+Future<Uint8List> readFileAsBytes(String path) async {
   throw UnsupportedError('File storage is not supported on web');
 }
 

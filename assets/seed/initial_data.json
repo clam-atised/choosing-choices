@@ -1,0 +1,121 @@
+{
+  "folders": [
+    {
+      "id": "trip_to_malaysia",
+      "name": "Trip To Malaysia",
+      "items": [
+        {
+          "id": "places_to_visit",
+          "name": "Places to visit",
+          "cards": [
+            {
+              "id": "place_1",
+              "name": "Petronas Twin Towers",
+              "location": "Kuala Lumpur, Malaysia",
+              "accessibleByTrain": true,
+              "description": "Iconic 88-storey towers with a sky bridge and observation deck.",
+              "image": "assets/seed/images/places/petronas.jpg"
+            },
+            {
+              "id": "place_2",
+              "name": "Batu Caves",
+              "location": "Gombak, Selangor",
+              "accessibleByTrain": true,
+              "description": "Limestone hill with Hindu temples and a 272-step climb to the main cave.",
+              "image": "assets/seed/images/places/batu_caves.jpg"
+            },
+            {
+              "id": "place_3",
+              "name": "George Town Heritage Zone",
+              "location": "Penang, Malaysia",
+              "accessibleByTrain": false,
+              "description": "UNESCO-listed streets with street art, clan houses, and colonial architecture.",
+              "image": "assets/seed/images/places/george_town.jpg"
+            },
+            {
+              "id": "place_4",
+              "name": "Langkawi Sky Bridge",
+              "location": "Langkawi, Kedah",
+              "accessibleByTrain": false,
+              "description": "Curved pedestrian bridge with panoramic views of the Andaman Sea.",
+              "image": "assets/seed/images/places/langkawi_skybridge.jpg"
+            },
+            {
+              "id": "place_5",
+              "name": "Melaka Historic City",
+              "location": "Melaka, Malaysia",
+              "accessibleByTrain": false,
+              "description": "Colonial landmarks, Jonker Street night market, and riverside walks.",
+              "image": "assets/seed/images/places/melaka.jpg"
+            }
+          ]
+        },
+        {
+          "id": "restaurant_recommendations",
+          "name": "Restaurant recommendations",
+          "cards": [
+            {
+              "id": "restaurant_1",
+              "name": "Jalan Alor Night Market",
+              "typeOfCuisine": "Malaysian street food",
+              "location": "Kuala Lumpur",
+              "image": "assets/seed/images/restaurants/jalan_alor.jpg"
+            },
+            {
+              "id": "restaurant_2",
+              "name": "Nasi Kandar Pelita",
+              "typeOfCuisine": "Indian-Muslim",
+              "location": "Penang & KL",
+              "image": "assets/seed/images/restaurants/nasi_kandar.jpg"
+            },
+            {
+              "id": "restaurant_3",
+              "name": "Village Park Restaurant",
+              "typeOfCuisine": "Malay",
+              "location": "Kuala Lumpur",
+              "image": "assets/seed/images/restaurants/village_park.jpg"
+            },
+            {
+              "id": "restaurant_4",
+              "name": "Little Penang Kafe",
+              "typeOfCuisine": "Nyonya & Penang hawker",
+              "location": "George Town, Penang",
+              "image": "assets/seed/images/restaurants/little_penang.jpg"
+            },
+            {
+              "id": "restaurant_5",
+              "name": "Restoran Rebung Chef Ismail",
+              "typeOfCuisine": "Traditional Malay buffet",
+              "location": "Kuala Lumpur",
+              "image": "assets/seed/images/restaurants/rebung.jpg"
+            }
+          ]
+        },
+        {
+          "id": "activities",
+          "name": "Activities",
+          "cards": [
+            {
+              "id": "activity_1",
+              "name": "Batu Caves temple visit",
+              "charge": "Free (cave temple); RM25 guided tour",
+              "image": "assets/seed/images/activities/batu_caves_activity.jpg"
+            },
+            {
+              "id": "activity_2",
+              "name": "Langkawi island hopping",
+              "charge": "RM120–180 per person (half-day tour)",
+              "image": "assets/seed/images/activities/island_hopping.jpg"
+            },
+            {
+              "id": "activity_3",
+              "name": "Cameron Highlands tea plantation tour",
+              "charge": "RM50–80 per person",
+              "image": "assets/seed/images/activities/cameron_highlands.jpg"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

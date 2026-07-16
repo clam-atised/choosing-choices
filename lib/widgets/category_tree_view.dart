@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/category_item.dart';
+import '../theme/app_colours.dart';
 import 'folder_section.dart';
 
 class CategoryTreeView extends StatelessWidget {
@@ -39,6 +40,17 @@ class CategoryTreeView extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: folders.length,
+      proxyDecorator: (child, index, animation) {
+        return Material(
+          color: Colors.transparent,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: AppColours.light),
+          ),
+          child: child,
+        );
+      },
       onReorderItem: (oldIndex, newIndex) {
         onReorder!(oldIndex, newIndex);
       },

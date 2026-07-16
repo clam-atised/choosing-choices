@@ -29,7 +29,7 @@ class _EditableFolderTitleState extends State<EditableFolderTitle> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.edit_outlined, color: AppColours.dark, size: 18),
+          Icon(Icons.edit_outlined, color: AppColours.dark, size: 18),
           const SizedBox(width: 6),
           Flexible(
             child: TextField(

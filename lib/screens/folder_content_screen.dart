@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../data/cards_repository.dart';
 import '../data/folders_repository.dart';
+import '../models/category_item.dart';
+import '../models/choice_card.dart';
+import '../models/folder_search_state.dart';
+import '../services/card_search_service.dart';
 import '../theme/app_colours.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/layout_constants.dart';
+import '../widgets/add_card_dialog.dart';
 import '../widgets/category_card_carousel.dart';
 import '../widgets/choices_drawer.dart';
+import '../widgets/create_actions_menu.dart';
+import '../widgets/create_category_dialog.dart';
+import '../widgets/create_folder_dialog.dart';
+import '../widgets/folder_search_dialog.dart';
+import '../widgets/folder_vertical_cards_view.dart';
 import '../widgets/shared_app_bar.dart';
-import 'category_content_screen.dart';
 
 class FolderContentScreen extends StatefulWidget {
   const FolderContentScreen({
@@ -22,13 +32,24 @@ class FolderContentScreen extends StatefulWidget {
 }
 
 class _FolderContentScreenState extends State<FolderContentScreen> {
+  final GlobalKey _addButtonKey = GlobalKey();
+  final CardSearchService _searchService = CardSearchService.instance;
+
   String? _expandedItemId;
+  FolderSearchState? _searchState;
 
   @override
   void initState() {
     super.initState();
     FoldersRepository.instance.addListener(_onFoldersChanged);
-    _syncExpandedItem();
+    _initExpandedItem();
+  }
+
+  void _initExpandedItem() {
+    final folder = FoldersRepository.instance.folderById(widget.folderId);
+    if (folder != null && folder.items.isNotEmpty) {
+      _expandedItemId = folder.items.first.id;
+    }
   }
 
   @override
@@ -63,15 +84,212 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     });
   }
 
-  void _openCategory(BuildContext context, String itemId) {
-    Navigator.push(
-      context,
-      MaterialPageRoute<void>(
-        builder: (context) => CategoryContentScreen(
-          folderId: widget.folderId,
-          itemId: itemId,
-          openAddCardOnMount: true,
+  CardDisplayDirection _effectiveDirection(CategoryItem item) {
+    if (_searchState?.isDetailSearchActive == true &&
+        _searchState!.selectedCategoryId == item.id) {
+      return CardDisplayDirection.vertical;
+    }
+    return item.cardDisplayDirection;
+  }
+
+  List<FolderCategoryCardsSection> _folderWideSections(Folder folder) {
+    final query = _searchState?.folderQuery ?? '';
+    return [
+      for (final item in folder.items)
+        FolderCategoryCardsSection(
+          categoryId: item.id,
+          categoryName: item.name,
+          cards: _searchService.filterCardsForCategory(
+            folderId: widget.folderId,
+            categoryId: item.id,
+            mode: FolderSearchMode.folderWide,
+            folderQuery: query,
+          ),
         ),
+    ].where((section) => section.cards.isNotEmpty).toList();
+  }
+
+  List<ChoiceCard> _filteredCardsForItem(CategoryItem item) {
+    final searchState = _searchState;
+    if (searchState == null || !searchState.isActive) {
+      return _searchService.filterCardsForCategory(
+        folderId: widget.folderId,
+        categoryId: item.id,
+        mode: FolderSearchMode.none,
+      );
+    }
+
+    if (searchState.isFolderWideActive) {
+      return _searchService.filterCardsForCategory(
+        folderId: widget.folderId,
+        categoryId: item.id,
+        mode: FolderSearchMode.folderWide,
+        folderQuery: searchState.folderQuery,
+      );
+    }
+
+    if (searchState.isDetailSearchActive &&
+        searchState.selectedCategoryId == item.id) {
+      return _searchService.filterCardsForCategory(
+        folderId: widget.folderId,
+        categoryId: item.id,
+        mode: FolderSearchMode.detail,
+        detailQueries: searchState.detailQueries,
+      );
+    }
+
+    return _searchService.filterCardsForCategory(
+      folderId: widget.folderId,
+      categoryId: item.id,
+      mode: FolderSearchMode.none,
+    );
+  }
+
+  Future<void> _showCreateActionsMenu() async {
+    final anchor = anchorOffsetForKey(_addButtonKey);
+    if (anchor == null || !mounted) {
+      return;
+    }
+
+    await showCreateActionsMenu(
+      context,
+      anchor: anchor,
+      callbacks: CreateActionsCallbacks(
+        onCreateFolder: _onCreateFolder,
+        onCreateCategory: _onCreateCategory,
+        onCreateCard: _onCreateCard,
+      ),
+    );
+  }
+
+  Future<void> _showSearchDialog() async {
+    final result = await showFolderSearchDialog(
+      context,
+      folderId: widget.folderId,
+      initialCategoryId: _expandedItemId,
+      initialState: _searchState,
+    );
+    if (!mounted || result == null) {
+      return;
+    }
+
+    setState(() {
+      _searchState = result.isActive ? result : null;
+      if (result.isDetailSearchActive && result.selectedCategoryId != null) {
+        _expandedItemId = result.selectedCategoryId;
+      }
+    });
+  }
+
+  void _onCreateFolder() {
+    showCreateFolderDialog(context);
+  }
+
+  Future<void> _onCreateCategory() async {
+    final result = await showCreateCategoryDialog(
+      context,
+      initialFolderId: widget.folderId,
+    );
+    if (!mounted || result == null) {
+      return;
+    }
+
+    if (result.folderId == widget.folderId) {
+      setState(() => _expandedItemId = result.itemId);
+      await showAddCardDialog(
+        context,
+        folderId: widget.folderId,
+        initialItemId: result.itemId,
+      );
+    }
+  }
+
+  Future<void> _onCreateCard() async {
+    final folder = FoldersRepository.instance.folderById(widget.folderId);
+    if (folder == null || folder.items.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Create a category first to add a card.'),
+        ),
+      );
+      return;
+    }
+
+    final initialItemId = _expandedItemId ?? folder.items.first.id;
+    await showAddCardDialog(
+      context,
+      folderId: widget.folderId,
+      initialItemId: initialItemId,
+    );
+  }
+
+  Widget _buildBody(Folder folder) {
+    if (_searchState?.isFolderWideActive == true) {
+      final sections = _folderWideSections(folder);
+      if (sections.isEmpty) {
+        return const Center(
+          child: Text(
+            'No matching cards',
+            style: TextStyle(color: AppColours.white),
+          ),
+        );
+      }
+
+      return FolderVerticalCardsView(
+        folderId: widget.folderId,
+        sections: sections,
+      );
+    }
+
+    if (folder.items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Press '+' to add new category",
+              textAlign: TextAlign.center,
+              style: AppTextStyles.alice(
+                fontSize: 18,
+                color: AppColours.light,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Created by clam.atised',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.sourceSans(
+                fontSize: 12,
+                color: AppColours.light,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final item in folder.items) ...[
+            _CategorySectionHeader(
+              name: item.name,
+              isExpanded: _expandedItemId == item.id,
+              onToggle: () => _toggleExpanded(item.id),
+            ),
+            if (_expandedItemId == item.id)
+              CategoryCardCarousel(
+                folderId: widget.folderId,
+                categoryItemId: item.id,
+                displayDirection: _effectiveDirection(item),
+                filteredCards: _filteredCardsForItem(item),
+              ),
+          ],
+        ],
       ),
     );
   }
@@ -79,7 +297,11 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: FoldersRepository.instance,
+      listenable: Listenable.merge([
+        FoldersRepository.instance,
+        CardsRepository.instance,
+        AppColours.instance,
+      ]),
       builder: (context, _) {
         final folder = FoldersRepository.instance.folderById(widget.folderId);
         if (folder == null) {
@@ -91,30 +313,18 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
         return Scaffold(
           backgroundColor: AppColours.dark,
           drawer: const ChoicesDrawer(),
-          appBar: SharedAppBar(title: folder.name),
+          appBar: SharedAppBar(
+            title: folder.name,
+            showSearchButton: true,
+            showAddButton: true,
+            addButtonKey: _addButtonKey,
+            onSearchPressed: _showSearchDialog,
+            onAddPressed: _showCreateActionsMenu,
+          ),
           body: centerPhoneWidth(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(0, 16, 0, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final item in folder.items) ...[
-                    _CategorySectionHeader(
-                      name: item.name,
-                      isExpanded: _expandedItemId == item.id,
-                      onToggle: () => _toggleExpanded(item.id),
-                      onNavigate: () => _openCategory(context, item.id),
-                    ),
-                    if (_expandedItemId == item.id)
-                      Expanded(
-                        child: CategoryCardCarousel(
-                          folderId: widget.folderId,
-                          categoryItemId: item.id,
-                        ),
-                      ),
-                  ],
-                ],
-              ),
+              child: _buildBody(folder),
             ),
           ),
         );
@@ -128,13 +338,11 @@ class _CategorySectionHeader extends StatelessWidget {
     required this.name,
     required this.isExpanded,
     required this.onToggle,
-    required this.onNavigate,
   });
 
   final String name;
   final bool isExpanded;
   final VoidCallback onToggle;
-  final VoidCallback onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -156,12 +364,14 @@ class _CategorySectionHeader extends StatelessWidget {
           ),
           Expanded(
             child: GestureDetector(
-              onTap: onNavigate,
+              onTap: onToggle,
               behavior: HitTestBehavior.opaque,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
                   name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.alice(
                     fontSize: 20,
                     color: AppColours.white,

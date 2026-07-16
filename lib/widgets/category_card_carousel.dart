@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/cards_repository.dart';
+import '../models/category_item.dart';
 import '../models/choice_card.dart';
 import '../theme/app_colours.dart';
 import '../theme/layout_constants.dart';
@@ -12,73 +13,68 @@ class CategoryCardCarousel extends StatelessWidget {
     super.key,
     required this.folderId,
     required this.categoryItemId,
+    required this.displayDirection,
+    this.filteredCards,
   });
 
   final String folderId;
   final String categoryItemId;
+  final CardDisplayDirection displayDirection;
+  final List<ChoiceCard>? filteredCards;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: CardsRepository.instance,
       builder: (context, _) {
-        final cards = CardsRepository.instance.cardsForCategory(
-          folderId,
-          categoryItemId,
-        );
+        final cards = filteredCards ??
+            CardsRepository.instance.cardsForCategory(
+              folderId,
+              categoryItemId,
+            );
 
         if (cards.isEmpty) {
-          return const _EmptyCardCarousel();
+          return const SizedBox.shrink();
         }
 
-        return _CardPageView(
+        return _CardCollectionView(
           folderId: folderId,
           categoryItemId: categoryItemId,
           cards: cards,
+          displayDirection: displayDirection,
         );
       },
     );
   }
 }
 
-class _CardPageView extends StatefulWidget {
-  const _CardPageView({
+class _CardCollectionView extends StatefulWidget {
+  const _CardCollectionView({
     required this.folderId,
     required this.categoryItemId,
     required this.cards,
+    required this.displayDirection,
   });
 
   final String folderId;
   final String categoryItemId;
   final List<ChoiceCard> cards;
+  final CardDisplayDirection displayDirection;
 
   @override
-  State<_CardPageView> createState() => _CardPageViewState();
+  State<_CardCollectionView> createState() => _CardCollectionViewState();
 }
 
-class _CardPageViewState extends State<_CardPageView> {
-  late final PageController _pageController;
+class _CardCollectionViewState extends State<_CardCollectionView> {
   String? _selectedCardId;
 
   @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(viewportFraction: 1);
-  }
-
-  @override
-  void didUpdateWidget(covariant _CardPageView oldWidget) {
+  void didUpdateWidget(covariant _CardCollectionView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_selectedCardId != null &&
         !widget.cards.any((card) => card.id == _selectedCardId)) {
       setState(() => _selectedCardId = null);
     }
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
   }
 
   void _onCardLongPress(ChoiceCard card) {
@@ -93,7 +89,6 @@ class _CardPageViewState extends State<_CardPageView> {
     await showAddCardDialog(
       context,
       folderId: widget.folderId,
-      itemId: widget.categoryItemId,
       existingCard: card,
     );
     if (mounted) {
@@ -132,50 +127,105 @@ class _CardPageViewState extends State<_CardPageView> {
     }
   }
 
+  Widget _buildCardTile(ChoiceCard card) {
+    return ChoiceCardTile(
+      card: card,
+      onLongPress: () => _onCardLongPress(card),
+    );
+  }
+
+  Widget _buildPhoneCarousel(double cardWidth) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: kCardHorizontalPadding),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var index = 0; index < widget.cards.length; index++) ...[
+            if (index > 0) const SizedBox(width: 16),
+            SizedBox(
+              width: cardWidth,
+              child: _buildCardTile(widget.cards[index]),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWideScrollView() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: kCardHorizontalPadding),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var index = 0; index < widget.cards.length; index++) ...[
+            if (index > 0) const SizedBox(width: 16),
+            SizedBox(
+              width: kDesktopCardWidth,
+              child: _buildCardTile(widget.cards[index]),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerticalScrollView() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: kCardHorizontalPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var index = 0; index < widget.cards.length; index++) ...[
+            if (index > 0) const SizedBox(height: 12),
+            _buildCardTile(widget.cards[index]),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final useVertical = widget.displayDirection == CardDisplayDirection.vertical;
+        final useCarousel = !useVertical && isPhoneSize(context);
+        final phoneCardWidth = cardPageWidth(context);
+
         return Stack(
-          alignment: Alignment.bottomCenter,
+          alignment: Alignment.topCenter,
           children: [
-            PageView.builder(
-              controller: _pageController,
-              padEnds: false,
-              itemCount: widget.cards.length,
-              itemBuilder: (context, index) {
-                final card = widget.cards[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: kCardHorizontalPadding,
-                  ),
-                  child: SizedBox(
-                    height: constraints.maxHeight,
-                    child: ChoiceCardTile(
-                      card: card,
-                      onLongPress: () => _onCardLongPress(card),
-                    ),
-                  ),
-                );
-              },
-            ),
+            if (useVertical)
+              _buildVerticalScrollView()
+            else if (useCarousel)
+              _buildPhoneCarousel(phoneCardWidth)
+            else
+              _buildWideScrollView(),
             if (_selectedCardId != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _CardActionBar(
-                  onEdit: () {
-                    final card = widget.cards.firstWhere(
-                      (entry) => entry.id == _selectedCardId,
-                    );
-                    _editCard(card);
-                  },
-                  onDelete: () {
-                    final card = widget.cards.firstWhere(
-                      (entry) => entry.id == _selectedCardId,
-                    );
-                    _confirmDeleteCard(card);
-                  },
-                  onDismiss: _clearSelection,
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 16,
+                child: Center(
+                  child: _CardActionBar(
+                    onEdit: () {
+                      final card = widget.cards.firstWhere(
+                        (entry) => entry.id == _selectedCardId,
+                      );
+                      _editCard(card);
+                    },
+                    onDelete: () {
+                      final card = widget.cards.firstWhere(
+                        (entry) => entry.id == _selectedCardId,
+                      );
+                      _confirmDeleteCard(card);
+                    },
+                    onDismiss: _clearSelection,
+                  ),
                 ),
               ),
           ],
@@ -209,54 +259,21 @@ class _CardActionBar extends StatelessWidget {
           children: [
             IconButton(
               tooltip: 'Edit card',
-              icon: const Icon(Icons.edit_outlined, color: AppColours.dark),
+              icon: Icon(Icons.edit_outlined, color: AppColours.dark),
               onPressed: onEdit,
             ),
             IconButton(
               tooltip: 'Delete card',
-              icon: const Icon(Icons.delete_outline, color: AppColours.dark),
+              icon: Icon(Icons.delete_outline, color: AppColours.dark),
               onPressed: onDelete,
             ),
             IconButton(
               tooltip: 'Close',
-              icon: const Icon(Icons.close, color: AppColours.dark),
+              icon: Icon(Icons.close, color: AppColours.dark),
               onPressed: onDismiss,
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _EmptyCardCarousel extends StatelessWidget {
-  const _EmptyCardCarousel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: kCardHorizontalPadding),
-      child: Row(
-        children: const [
-          Expanded(child: _PlaceholderCard()),
-          SizedBox(width: 12),
-          Expanded(child: _PlaceholderCard()),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlaceholderCard extends StatelessWidget {
-  const _PlaceholderCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 120,
-      decoration: BoxDecoration(
-        color: AppColours.light,
-        borderRadius: BorderRadius.circular(12),
       ),
     );
   }

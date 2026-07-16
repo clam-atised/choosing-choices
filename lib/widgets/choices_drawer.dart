@@ -5,6 +5,22 @@ import '../screens/folder_content_screen.dart';
 import '../screens/settings_screen.dart';
 import '../theme/app_colours.dart';
 import '../theme/app_text_styles.dart';
+import 'create_folder_dialog.dart';
+
+Future<void> _onAddNewFolder(BuildContext context) async {
+  final navigator = Navigator.of(context);
+  navigator.pop();
+  final folder = await showCreateFolderDialog(navigator.context);
+  if (folder == null) {
+    return;
+  }
+
+  navigator.push(
+    MaterialPageRoute<void>(
+      builder: (context) => FolderContentScreen(folderId: folder.id),
+    ),
+  );
+}
 
 class ChoicesDrawer extends StatelessWidget {
   const ChoicesDrawer({super.key});
@@ -19,11 +35,11 @@ class ChoicesDrawer extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppColours.light,
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
               color: AppColours.shadow,
               blurRadius: 12,
-              offset: Offset(4, 0),
+              offset: const Offset(4, 0),
             ),
           ],
         ),
@@ -31,9 +47,14 @@ class ChoicesDrawer extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: ListenableBuilder(
-              listenable: FoldersRepository.instance,
+              listenable: Listenable.merge([
+                FoldersRepository.instance,
+                AppColours.instance,
+              ]),
               builder: (context, _) {
                 final folders = FoldersRepository.instance.folders;
+                final showAddFolderCta =
+                    folders.every((folder) => folder.isHidden);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +79,7 @@ class ChoicesDrawer extends StatelessWidget {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.settings,
                             color: AppColours.dark,
                           ),
@@ -103,7 +124,7 @@ class ChoicesDrawer extends StatelessWidget {
                               ),
                             ),
                             if (folder.isHidden)
-                              const Icon(
+                              Icon(
                                 Icons.visibility_off,
                                 color: AppColours.dark,
                                 size: 20,
@@ -111,11 +132,22 @@ class ChoicesDrawer extends StatelessWidget {
                           ],
                         ),
                       ),
+                    if (showAddFolderCta)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: GestureDetector(
+                          onTap: () => _onAddNewFolder(context),
+                          child: Text(
+                            'Add New Folder +',
+                            style: AppTextStyles.alice(fontSize: 20),
+                          ),
+                        ),
+                      ),
                     const Spacer(),
                     Align(
                       alignment: Alignment.bottomRight,
                       child: IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.keyboard_double_arrow_left,
                           color: AppColours.dark,
                           size: 28,

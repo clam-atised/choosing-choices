@@ -7,6 +7,7 @@ Future<T?> showChoicesDialog<T>({
   required BuildContext context,
   required Widget child,
   double maxWidth = 520,
+  bool scrollable = true,
 }) {
   final maxHeight = MediaQuery.sizeOf(context).height * 0.85;
 
@@ -24,7 +25,7 @@ Future<T?> showChoicesDialog<T>({
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-          child: child,
+          child: scrollable ? SingleChildScrollView(child: child) : child,
         ),
       ),
     ),

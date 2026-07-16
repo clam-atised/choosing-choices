@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:choices/data/cards_repository.dart';
 import 'package:choices/data/folders_repository.dart';
+import 'package:choices/models/category_detail_definition.dart';
+import 'package:choices/models/choice_card.dart';
 import 'package:choices/screens/category_content_screen.dart';
 import 'package:choices/widgets/add_card_dialog.dart';
+import 'test_helpers.dart';
 
 Finder _fieldByHint(String hint) {
   return find.byWidgetPredicate(
@@ -13,125 +16,161 @@ Finder _fieldByHint(String hint) {
   );
 }
 
+Finder _saveCheckInDialog() {
+  return find.byKey(const Key('add_card_save_check'));
+}
+
 void main() {
-  setUp(() {
-    FoldersRepository.instance.configureForTesting();
-    CardsRepository.instance.configureForTesting();
+  setUp(() async {
+    await configureRepositoriesForTesting();
   });
 
-  Future<void> openAddCardDialog(WidgetTester tester) async {
+  Future<void> openAddCardDialogForSeedCategory(WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: CategoryContentScreen(
-          folderId: 'trip_to_japan',
-          itemId: 'japan_eat',
+          folderId: FoldersRepository.seedFolderId,
+          itemId: 'places_to_visit',
         ),
       ),
     );
-    await tester.pumpAndSettle();
-    await showAddCardDialog(
+    await pumpUi(tester);
+    showAddCardDialog(
       tester.element(find.byType(CategoryContentScreen)),
-      folderId: 'trip_to_japan',
-      itemId: 'japan_eat',
+      folderId: FoldersRepository.seedFolderId,
+      initialItemId: 'places_to_visit',
     );
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
   }
 
-  testWidgets('Add detail type picker shows three options',
+  testWidgets('subsequent mode shows schema fields for seed category',
       (WidgetTester tester) async {
-    await openAddCardDialog(tester);
+    await openAddCardDialogForSeedCategory(tester);
 
-    await tester.tap(find.text('Add detail'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Text cell'), findsOneWidget);
-    expect(find.text('Yes/No cell'), findsOneWidget);
-    expect(find.text('Dropdown cell'), findsOneWidget);
+    expect(find.text('Add detail'), findsNothing);
+    expect(find.text('Location:'), findsOneWidget);
+    expect(_saveCheckInDialog(), findsOneWidget);
   });
 
-  testWidgets('Add Card saves card with title and text detail',
+  testWidgets('subsequent card saves with title and text detail value',
       (WidgetTester tester) async {
-    await openAddCardDialog(tester);
+    await openAddCardDialogForSeedCategory(tester);
 
     await tester.enterText(_fieldByHint('Title'), 'Daiso Tokyo');
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Add detail'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Text cell'));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
     await tester.enterText(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.hintText == 'Label',
-      ),
-      'Location',
-    );
-    await tester.enterText(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.hintText == 'Value',
-      ),
+      find.descendant(
+        of: find.byType(AddCardDialog),
+        matching: _fieldByHint('Location: <text>'),
+      ).first,
       'Tokyo, Japan',
     );
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
 
-    await tester.tap(find.text('Add Card'));
-    await tester.pumpAndSettle();
+    await tester.tap(_saveCheckInDialog());
+    await pumpUi(tester);
 
     final cards = CardsRepository.instance.cardsForCategory(
-      'trip_to_japan',
-      'japan_eat',
+      FoldersRepository.seedFolderId,
+      'places_to_visit',
     );
-    expect(cards.length, 1);
-    expect(cards.first.title, 'Daiso Tokyo');
-    expect(cards.first.details.first.label, 'Location');
-    expect(cards.first.details.first.textValue, 'Tokyo, Japan');
+    expect(cards.any((card) => card.title == 'Daiso Tokyo'), isTrue);
+    final saved = cards.firstWhere((card) => card.title == 'Daiso Tokyo');
+    final location = saved.details.firstWhere(
+      (field) => field.label == 'Location',
+    );
+    expect(location.textValue, 'Tokyo, Japan');
   });
 
   testWidgets('Yes/No detail persists yesNoValue', (WidgetTester tester) async {
-    await openAddCardDialog(tester);
+    final categoryId = (await FoldersRepository.instance.addItem(
+      FoldersRepository.seedFolderId,
+      'Yes No Category',
+    ))!
+        .id;
+
+    await FoldersRepository.instance.updateItemDetailDefinitions(
+      FoldersRepository.seedFolderId,
+      categoryId,
+      const [
+        CategoryDetailDefinition(
+          id: 'def_yesno',
+          label: 'Reservation needed',
+          type: DetailFieldType.yesNo,
+        ),
+      ],
+    );
+    await CardsRepository.instance.addCard(
+      ChoiceCard(
+        id: 'card_seed',
+        folderId: FoldersRepository.seedFolderId,
+        categoryItemId: categoryId,
+        title: 'Seed Card',
+        details: const [
+          CardDetailField(
+            id: 'def_yesno',
+            label: 'Reservation needed',
+            type: DetailFieldType.yesNo,
+            yesNoValue: false,
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: ElevatedButton(
+                onPressed: () {
+                  showAddCardDialog(
+                    context,
+                    folderId: FoldersRepository.seedFolderId,
+                    initialItemId: categoryId,
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await pumpUi(tester);
+    await tester.tap(find.text('Open'));
+    await pumpUi(tester);
 
     await tester.enterText(_fieldByHint('Title'), 'Test Card');
-    await tester.tap(find.text('Add detail'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Yes/No cell'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.hintText == 'Label',
-      ),
-      'Reservation needed',
-    );
     await tester.tap(find.text('Yes'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Add Card'));
-    await tester.pumpAndSettle();
+    await pumpUi(tester);
+    await tester.tap(_saveCheckInDialog());
+    await pumpUi(tester);
 
     final card = CardsRepository.instance.cardsForCategory(
-      'trip_to_japan',
-      'japan_eat',
-    ).first;
+      FoldersRepository.seedFolderId,
+      categoryId,
+    ).last;
     final detail = card.details.firstWhere(
       (field) => field.label == 'Reservation needed',
     );
     expect(detail.yesNoValue, isTrue);
   });
 
-  testWidgets('Empty title keeps Add Card disabled', (WidgetTester tester) async {
-    await openAddCardDialog(tester);
+  testWidgets('Empty title keeps save disabled', (WidgetTester tester) async {
+    await openAddCardDialogForSeedCategory(tester);
 
-    await tester.tap(find.text('Add Card'));
-    await tester.pumpAndSettle();
+    await tester.tap(_saveCheckInDialog());
+    await pumpUi(tester);
 
     expect(find.byType(AddCardDialog), findsOneWidget);
-    expect(CardsRepository.instance.cards, isEmpty);
+    expect(
+      CardsRepository.instance.cardsForCategory(
+        FoldersRepository.seedFolderId,
+        'places_to_visit',
+      ).where((card) => card.title.isEmpty),
+      isEmpty,
+    );
   });
 }

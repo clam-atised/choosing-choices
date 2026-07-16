@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/colour_template.dart';
@@ -13,6 +12,9 @@ class ColourTemplatesRepository {
       ColourTemplatesRepository._();
 
   List<ColourTemplate>? _templates;
+  String? _selectedTemplateName;
+
+  String? get selectedTemplateName => _selectedTemplateName;
 
   Future<List<ColourTemplate>> loadTemplates() async {
     if (_templates != null) {
@@ -28,15 +30,36 @@ class ColourTemplatesRepository {
         .map((item) => ColourTemplate.fromJson(item as Map<String, dynamic>))
         .toList();
 
+    _selectedTemplateName ??=
+        _templates!.isNotEmpty ? _templates!.first.name : null;
+
     return _templates!;
+  }
+
+  Future<void> selectTemplateByName(String name) async {
+    final templates = await loadTemplates();
+    final template = templates.firstWhere(
+      (item) => item.name == name,
+      orElse: () => templates.first,
+    );
+
+    _selectedTemplateName = template.name;
+    AppColours.instance.apply(
+      dark: template.dark ?? AppColours.defaultDark,
+      light: template.light ?? AppColours.defaultLight,
+      shadow: template.shadow ?? AppColours.defaultShadow,
+    );
   }
 
   Future<Color> activeDarkColour() async {
     final templates = await loadTemplates();
-    final active = templates.firstWhere(
-      (template) => template.dark != null,
-      orElse: () => templates.first,
-    );
+    final selectedName = _selectedTemplateName;
+    final active = selectedName == null
+        ? templates.first
+        : templates.firstWhere(
+            (template) => template.name == selectedName,
+            orElse: () => templates.first,
+          );
     return active.dark ?? AppColours.dark;
   }
 }

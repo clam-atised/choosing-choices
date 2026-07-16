@@ -1,3 +1,5 @@
+import 'category_detail_definition.dart';
+
 enum CardDisplayDirection {
   horizontal,
   vertical;
@@ -15,21 +17,25 @@ class CategoryItem {
     required this.id,
     required this.name,
     this.cardDisplayDirection = CardDisplayDirection.horizontal,
+    this.detailDefinitions = const [],
   });
 
   final String id;
   final String name;
   final CardDisplayDirection cardDisplayDirection;
+  final List<CategoryDetailDefinition> detailDefinitions;
 
   CategoryItem copyWith({
     String? id,
     String? name,
     CardDisplayDirection? cardDisplayDirection,
+    List<CategoryDetailDefinition>? detailDefinitions,
   }) {
     return CategoryItem(
       id: id ?? this.id,
       name: name ?? this.name,
       cardDisplayDirection: cardDisplayDirection ?? this.cardDisplayDirection,
+      detailDefinitions: detailDefinitions ?? this.detailDefinitions,
     );
   }
 
@@ -38,16 +44,26 @@ class CategoryItem {
       'id': id,
       'name': name,
       'cardDisplayDirection': cardDisplayDirection.name,
+      'detailDefinitions':
+          detailDefinitions.map((definition) => definition.toJson()).toList(),
     };
   }
 
   factory CategoryItem.fromJson(Map<String, dynamic> json) {
+    final definitionsJson = json['detailDefinitions'] as List<dynamic>? ?? [];
     return CategoryItem(
       id: json['id'] as String,
       name: json['name'] as String,
       cardDisplayDirection: CardDisplayDirection.fromJson(
         json['cardDisplayDirection'] as String? ?? 'horizontal',
       ),
+      detailDefinitions: definitionsJson
+          .map(
+            (definition) => CategoryDetailDefinition.fromJson(
+              definition as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
     );
   }
 }

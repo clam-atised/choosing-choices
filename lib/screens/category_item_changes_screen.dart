@@ -54,7 +54,10 @@ class _CategoryItemChangesScreenState extends State<CategoryItemChangesScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _repository,
+      listenable: Listenable.merge([
+        _repository,
+        AppColours.instance,
+      ]),
       builder: (context, _) {
         final folders = _visibleFolders;
         final enableReorder = widget.filter.isAll && folders.length > 1;

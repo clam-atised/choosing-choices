@@ -38,6 +38,10 @@ class DetailTypePickerSheet extends StatelessWidget {
           label: 'Dropdown cell',
           onTap: () => Navigator.pop(context, DetailFieldType.dropdown),
         ),
+        _TypeOption(
+          label: 'Date cell',
+          onTap: () => Navigator.pop(context, DetailFieldType.date),
+        ),
       ],
     );
   }

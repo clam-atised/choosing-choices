@@ -44,7 +44,7 @@ class _ExportDataDropdownState extends State<ExportDataDropdown> {
               top: const Radius.circular(12),
               bottom: Radius.circular(_isExpanded ? 0 : 12),
             ),
-            side: const BorderSide(color: AppColours.dark),
+            side: BorderSide(color: AppColours.dark),
           ),
           child: InkWell(
             borderRadius: BorderRadius.vertical(
@@ -62,7 +62,7 @@ class _ExportDataDropdownState extends State<ExportDataDropdown> {
                       style: AppTextStyles.alice(fontSize: 18),
                     ),
                   ),
-                  const Icon(Icons.play_arrow, color: AppColours.dark),
+                  Icon(Icons.play_arrow, color: AppColours.dark),
                 ],
               ),
             ),
@@ -71,30 +71,37 @@ class _ExportDataDropdownState extends State<ExportDataDropdown> {
         if (_isExpanded)
           Material(
             color: AppColours.light,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
               side: BorderSide(color: AppColours.dark),
             ),
-            child: Column(
-              children: [
-                for (final label in ExportFormat.labels)
-                  InkWell(
-                    onTap: () => _selectFormat(label),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          label,
-                          style: AppTextStyles.alice(fontSize: 18),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.25,
+              ),
+              child: ListView(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                children: [
+                  for (final label in ExportFormat.labels)
+                    InkWell(
+                      onTap: () => _selectFormat(label),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            label,
+                            style: AppTextStyles.alice(fontSize: 18),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
       ],

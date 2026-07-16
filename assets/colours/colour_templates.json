@@ -3,30 +3,44 @@
     {
       "id": "pastel_red",
       "name": "Pastel Red",
-      "dark": "#ff8585",
-      "light": "#ffedef",
-      "shadow": "#ff3131"
+      "dark": null,
+      "light": null,
+      "shadow": null
     },
     {
       "id": "pastel_blue",
       "name": "Pastel Blue",
-      "dark": null,
-      "light": null,
-      "shadow": null
+      "dark": "#85C7FF",
+      "light": "#EDF7FF",
+      "shadow": "#3194FF"
     },
     {
       "id": "pastel_green",
       "name": "Pastel Green",
-      "dark": null,
-      "light": null,
-      "shadow": null
+      "dark": "#85E0A3",
+      "light": "#EDFDF2",
+      "shadow": "#31C85D"
     },
     {
       "id": "pastel_yellow",
       "name": "Pastel Yellow",
-      "dark": null,
-      "light": null,
-      "shadow": null
+      "dark": "#FFE285",
+      "light": "#FFFBEA",
+      "shadow": "#FFC931"
+    },
+    {
+      "id": "pastel_purple",
+      "name": "Pastel Purple",
+      "dark": "#C085FF",
+      "light": "#F6EDFF",
+      "shadow": "#8A31FF"
+    },
+    {
+      "id": "pastel_violet",
+      "name": "Pastel Violet",
+      "dark": "#A685FF",
+      "light": "#F1EDFF",
+      "shadow": "#5F31FF"
     }
   ]
 }

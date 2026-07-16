@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 
@@ -10,6 +11,8 @@ Future<String> documentsFilePath(String fileName) async {
 Future<bool> fileExists(String path) => File(path).exists();
 
 Future<String> readFileAsString(String path) => File(path).readAsString();
+
+Future<Uint8List> readFileAsBytes(String path) => File(path).readAsBytes();
 
 Future<void> writeFileAsString(String path, String contents) =>
     File(path).writeAsString(contents);

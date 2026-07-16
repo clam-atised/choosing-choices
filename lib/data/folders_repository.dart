@@ -1,17 +1,18 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 
+import '../models/backup_diff.dart';
+import '../models/category_detail_definition.dart';
 import '../models/category_item.dart';
-import '../platform/file_storage.dart';
 import 'cards_repository.dart';
+import 'hive/hive_database.dart';
+import 'seed_data_loader.dart';
 
 class FoldersRepository extends ChangeNotifier {
   FoldersRepository._();
 
   static final FoldersRepository instance = FoldersRepository._();
 
-  static const String _fileName = 'folders.json';
+  static const String seedFolderId = 'trip_to_malaysia';
 
   final List<Folder> _folders = [];
   bool _useInMemoryOnly = false;
@@ -23,39 +24,6 @@ class FoldersRepository extends ChangeNotifier {
 
   bool get isLoaded => _isLoaded;
 
-  static List<Folder> get defaultFolders => [
-        const Folder(
-          id: 'trip_to_japan',
-          name: 'Trip to Japan',
-          items: [
-            CategoryItem(id: 'japan_eat', name: 'Where to eat'),
-            CategoryItem(id: 'japan_stay', name: 'Where to stay'),
-            CategoryItem(
-              id: 'japan_places',
-              name: 'Places to check out',
-            ),
-          ],
-        ),
-        const Folder(
-          id: 'malaysia_eat',
-          name: 'Where to eat in Malaysia',
-          items: [
-            CategoryItem(id: 'malaysia_state', name: 'State'),
-            CategoryItem(id: 'malaysia_popular', name: 'Popular'),
-            CategoryItem(id: 'malaysia_tbc', name: 'TBC'),
-          ],
-        ),
-        const Folder(
-          id: 'choice_of_unis',
-          name: 'Choice of unis',
-          items: [
-            CategoryItem(id: 'unis_state', name: 'State'),
-            CategoryItem(id: 'unis_utilities', name: 'Utilities'),
-            CategoryItem(id: 'unis_tbc', name: 'TBC'),
-          ],
-        ),
-      ];
-
   @visibleForTesting
   void configureForTesting({bool inMemoryOnly = true}) {
     _useInMemoryOnly = inMemoryOnly;
@@ -64,10 +32,8 @@ class FoldersRepository extends ChangeNotifier {
 
   @visibleForTesting
   void resetToDefaults() {
-    _folders
-      ..clear()
-      ..addAll(defaultFolders);
-    _isLoaded = true;
+    _folders.clear();
+    _isLoaded = false;
     notifyListeners();
   }
 
@@ -76,35 +42,47 @@ class FoldersRepository extends ChangeNotifier {
       return;
     }
 
-    if (_useInMemoryOnly || kIsWeb) {
-      resetToDefaults();
+    if (_useInMemoryOnly) {
+      await _loadFromSeed();
       return;
     }
 
     try {
-      final path = await _storagePath();
-      if (await fileExists(path)) {
-        final contents = await readFileAsString(path);
-        final data = json.decode(contents) as List<dynamic>;
-        _folders
-          ..clear()
-          ..addAll(
-            data.map((entry) => Folder.fromJson(entry as Map<String, dynamic>)),
-          );
-      } else {
-        _folders
-          ..clear()
-          ..addAll(defaultFolders);
+      if (HiveDatabase.foldersIsEmpty) {
+        await _loadFromSeed();
         await _save();
+      } else {
+        await _loadFromHive();
       }
     } catch (error, stackTrace) {
       debugPrint('FoldersRepository.load failed: $error');
       debugPrint('$stackTrace');
-      _folders
-        ..clear()
-        ..addAll(defaultFolders);
+      await _loadFromSeed();
+      await _save();
     }
 
+    _isLoaded = true;
+    notifyListeners();
+  }
+
+  Future<void> _loadFromHive() async {
+    final box = HiveDatabase.foldersBox;
+    _folders
+      ..clear()
+      ..addAll(
+        box.keys.map(
+          (key) => Folder.fromJson(
+            Map<String, dynamic>.from(box.get(key)!),
+          ),
+        ),
+      );
+  }
+
+  Future<void> _loadFromSeed() async {
+    final seedData = await SeedDataLoader.load();
+    _folders
+      ..clear()
+      ..addAll(seedData.folders);
     _isLoaded = true;
     notifyListeners();
   }
@@ -142,9 +120,6 @@ class FoldersRepository extends ChangeNotifier {
   }
 
   Future<void> reorderFolders(int oldIndex, int newIndex) async {
-    if (oldIndex < newIndex) {
-      newIndex -= 1;
-    }
     final folder = _folders.removeAt(oldIndex);
     _folders.insert(newIndex, folder);
     await _persist();
@@ -190,6 +165,30 @@ class FoldersRepository extends ChangeNotifier {
     }
 
     _folders[index] = _folders[index].copyWith(name: name);
+    await _persist();
+  }
+
+  Future<void> updateItemDetailDefinitions(
+    String folderId,
+    String itemId,
+    List<CategoryDetailDefinition> definitions,
+  ) async {
+    final folderIndex = _folderIndex(folderId);
+    if (folderIndex == -1) {
+      return;
+    }
+
+    final folder = _folders[folderIndex];
+    final itemIndex = folder.items.indexWhere((item) => item.id == itemId);
+    if (itemIndex == -1) {
+      return;
+    }
+
+    final updatedItems = [...folder.items];
+    updatedItems[itemIndex] = updatedItems[itemIndex].copyWith(
+      detailDefinitions: definitions,
+    );
+    _folders[folderIndex] = folder.copyWith(items: updatedItems);
     await _persist();
   }
 
@@ -247,10 +246,10 @@ class FoldersRepository extends ChangeNotifier {
     return folder;
   }
 
-  Future<void> addItem(String folderId, String itemName) async {
+  Future<CategoryItem?> addItem(String folderId, String itemName) async {
     final folderIndex = _folderIndex(folderId);
     if (folderIndex == -1) {
-      return;
+      return null;
     }
 
     final folder = _folders[folderIndex];
@@ -260,23 +259,90 @@ class FoldersRepository extends ChangeNotifier {
     );
     _folders[folderIndex] = folder.copyWith(items: [...folder.items, item]);
     await _persist();
+    return item;
+  }
+
+  /// Merges [backupFolders] into local state.
+  ///
+  /// Device-only folders/categories are never removed. When [mode] is retain,
+  /// overlapping categories keep the device version; when replace, they are
+  /// overwritten from the backup. Backup-only folders/categories are always added.
+  Future<void> mergeFromBackup(
+    List<Folder> backupFolders, {
+    required BackupMergeMode mode,
+  }) async {
+    for (final backupFolder in backupFolders) {
+      final index = _folderIndex(backupFolder.id);
+      if (index == -1) {
+        _folders.add(backupFolder);
+        continue;
+      }
+
+      final deviceFolder = _folders[index];
+      final mergedItems = _mergeCategoryItems(
+        deviceItems: deviceFolder.items,
+        backupItems: backupFolder.items,
+        mode: mode,
+      );
+
+      if (mode == BackupMergeMode.replace) {
+        _folders[index] = deviceFolder.copyWith(
+          name: backupFolder.name,
+          isHidden: backupFolder.isHidden,
+          items: mergedItems,
+        );
+      } else {
+        _folders[index] = deviceFolder.copyWith(items: mergedItems);
+      }
+    }
+
+    await _persist();
+  }
+
+  List<CategoryItem> _mergeCategoryItems({
+    required List<CategoryItem> deviceItems,
+    required List<CategoryItem> backupItems,
+    required BackupMergeMode mode,
+  }) {
+    final byId = {for (final item in deviceItems) item.id: item};
+    for (final backupItem in backupItems) {
+      final existing = byId[backupItem.id];
+      if (existing == null) {
+        byId[backupItem.id] = backupItem;
+        continue;
+      }
+      if (mode == BackupMergeMode.replace) {
+        byId[backupItem.id] = backupItem;
+      }
+    }
+
+    final result = <CategoryItem>[];
+    final seen = <String>{};
+    for (final item in deviceItems) {
+      result.add(byId[item.id]!);
+      seen.add(item.id);
+    }
+    for (final backupItem in backupItems) {
+      if (seen.contains(backupItem.id)) continue;
+      result.add(byId[backupItem.id]!);
+    }
+    return result;
   }
 
   int _folderIndex(String folderId) {
     return _folders.indexWhere((folder) => folder.id == folderId);
   }
 
-  Future<String> _storagePath() => documentsFilePath(_fileName);
-
   Future<void> _save() async {
-    if (_useInMemoryOnly || kIsWeb) {
+    if (_useInMemoryOnly) {
       return;
     }
 
-    final path = await _storagePath();
-    final encoded =
-        json.encode(_folders.map((folder) => folder.toJson()).toList());
-    await writeFileAsString(path, encoded);
+    final box = HiveDatabase.foldersBox;
+    await box.clear();
+    for (final folder in _folders) {
+      await box.put(folder.id, folder.toJson());
+    }
   }
 
   Future<void> _persist() async {

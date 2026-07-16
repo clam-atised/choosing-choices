@@ -8,24 +8,24 @@ class AppTextStyles {
 
   static TextStyle alice({
     double fontSize = 16,
-    Color color = AppColours.dark,
+    Color? color,
     FontWeight fontWeight = FontWeight.w400,
   }) {
     return GoogleFonts.alice(
       fontSize: fontSize,
-      color: color,
+      color: color ?? AppColours.dark,
       fontWeight: fontWeight,
     );
   }
 
   static TextStyle sourceSans({
     double fontSize = 12,
-    Color color = AppColours.dark,
+    Color? color,
     FontWeight fontWeight = FontWeight.w400,
   }) {
     return GoogleFonts.sourceSans3(
       fontSize: fontSize,
-      color: color,
+      color: color ?? AppColours.dark,
       fontWeight: fontWeight,
     );
   }
