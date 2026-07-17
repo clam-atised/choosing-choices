@@ -212,7 +212,7 @@ void main() {
     );
   });
 
-  testWidgets('tick greys card before date passes; tap prompts reopen',
+  testWidgets('tick greys card before date passes; tap reopens directly',
       (WidgetTester tester) async {
     CardsRepository.instance.clearCardsForTesting();
     await CardsRepository.instance.addCard(
@@ -261,8 +261,8 @@ void main() {
     await tester.tap(find.text('Future Event'));
     await pumpUi(tester);
 
-    expect(find.text(ChoiceCardTile.reopenSnackBarMessage), findsOneWidget);
-    expect(find.text('Save Card'), findsOneWidget);
+    expect(find.text(ChoiceCardTile.reopenSnackBarMessage), findsNothing);
+    expect(find.text('Save Card'), findsNothing);
     expect(
       CardsRepository.instance
           .cardsForCategory(
@@ -271,11 +271,12 @@ void main() {
           )
           .firstWhere((c) => c.id == 'card_future')
           .isStamped,
-      isTrue,
+      isFalse,
     );
   });
 
-  testWidgets('expired date greys card without stamp', (WidgetTester tester) async {
+  testWidgets('expired date tap prompts reopen message and date edit',
+      (WidgetTester tester) async {
     CardsRepository.instance.clearCardsForTesting();
     await CardsRepository.instance.addCard(
       _datedCard(
@@ -298,6 +299,12 @@ void main() {
 
     expect(find.byKey(ChoiceCardTile.completedCardKey), findsOneWidget);
     expect(find.byIcon(Icons.check), findsNothing);
+
+    await tester.tap(find.text('Past Event'));
+    await pumpUi(tester);
+
+    expect(find.text(ChoiceCardTile.reopenSnackBarMessage), findsOneWidget);
+    expect(find.text('Save Card'), findsOneWidget);
   });
 
   test('saving future date clears stamp via update path', () async {

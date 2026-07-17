@@ -56,14 +56,21 @@ class ChoiceCardTile extends StatelessWidget {
 
   Future<void> _onCardTap(BuildContext context) async {
     if (isCardInactive(card)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(reopenSnackBarMessage)),
-      );
-      await showAddCardDialog(
-        context,
-        folderId: card.folderId,
-        existingCard: card,
-      );
+      if (requiresNewDateToReopen(card)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(reopenSnackBarMessage)),
+        );
+        await showAddCardDialog(
+          context,
+          folderId: card.folderId,
+          existingCard: card,
+        );
+      } else {
+        await CardsRepository.instance.setCardCompleted(
+          card.id,
+          completed: false,
+        );
+      }
       return;
     }
 
@@ -127,14 +134,14 @@ class ChoiceCardTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (hasPhoto) ...[
-                  const SizedBox(width: 12),
-                  _CardPhotoBox(
-                    imagePath: card.imagePath!,
+                if (hasPhoto)
+                  CollapsiblePlatformImage(
+                    path: card.imagePath!,
                     width: photoWidth,
                     height: photoHeight,
+                    borderRadius: BorderRadius.circular(12),
+                    leadingSpacing: 12,
                   ),
-                ],
               ],
             ),
           ],
@@ -220,34 +227,6 @@ class _CardTitleHeader extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _CardPhotoBox extends StatelessWidget {
-  const _CardPhotoBox({
-    required this.imagePath,
-    required this.width,
-    required this.height,
-  });
-
-  final String imagePath;
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: PlatformImage(
-          path: imagePath,
-          fit: BoxFit.cover,
-          errorWidget: ColoredBox(color: AppColours.light),
-        ),
       ),
     );
   }

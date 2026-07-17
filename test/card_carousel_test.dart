@@ -204,8 +204,8 @@ void main() {
     await tester.tap(find.text('First Card'));
     await pumpUi(tester);
 
-    expect(find.text(ChoiceCardTile.reopenSnackBarMessage), findsOneWidget);
-    expect(find.text('Save Card'), findsOneWidget);
+    expect(find.text(ChoiceCardTile.reopenSnackBarMessage), findsNothing);
+    expect(find.text('Save Card'), findsNothing);
     expect(
       CardsRepository.instance
           .cardsForCategory(
@@ -214,7 +214,7 @@ void main() {
           )
           .firstWhere((card) => card.id == 'card_a')
           .isStamped,
-      isTrue,
+      isFalse,
     );
   });
 

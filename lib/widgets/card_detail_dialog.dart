@@ -36,20 +36,13 @@ Future<void> showCardDetailDialog(
           ],
         ),
         const SizedBox(height: 12),
-        if (card.imagePath != null) ...[
-          ClipRRect(
+        if (card.imagePath != null)
+          CollapsiblePlatformImage(
+            path: card.imagePath!,
+            aspectRatio: kCardPhotoWidth / kCardPhotoHeight,
             borderRadius: BorderRadius.circular(12),
-            child: AspectRatio(
-              aspectRatio: kCardPhotoWidth / kCardPhotoHeight,
-              child: PlatformImage(
-                path: card.imagePath!,
-                fit: BoxFit.cover,
-                errorWidget: ColoredBox(color: AppColours.light),
-              ),
-            ),
+            bottomSpacing: 12,
           ),
-          const SizedBox(height: 12),
-        ],
         for (final detail in card.details)
           if (normalizeDetailLabel(detail.label).isNotEmpty)
             Padding(

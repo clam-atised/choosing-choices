@@ -47,18 +47,10 @@ Future<List<int>?> pickBackupZip() async {
   final result = await FilePicker.pickFiles(
     type: FileType.custom,
     allowedExtensions: ['zip'],
-    withData: true,
   );
   if (result == null || result.files.isEmpty) return null;
 
-  final file = result.files.first;
-  if (file.bytes != null) {
-    return file.bytes;
-  }
-
-  final path = file.path;
-  if (path == null) return null;
-  return File(path).readAsBytes();
+  return result.files.first.readAsBytes();
 }
 
 Future<String> writeRestoredCardImage({

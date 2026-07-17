@@ -33,3 +33,18 @@ Future<void> ensureDirectory(String path) async {
     await directory.create(recursive: true);
   }
 }
+
+Future<String> saveImageBytes(
+  Uint8List bytes, {
+  String extension = 'jpg',
+}) async {
+  final directory = await getApplicationDocumentsDirectory();
+  const imagesDirName = 'card_images';
+  final imagesDirPath = '${directory.path}/$imagesDirName';
+  await ensureDirectory(imagesDirPath);
+
+  final destinationPath =
+      '$imagesDirPath/card_${DateTime.now().microsecondsSinceEpoch}.$extension';
+  await File(destinationPath).writeAsBytes(bytes, flush: true);
+  return destinationPath;
+}

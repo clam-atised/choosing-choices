@@ -86,6 +86,10 @@ bool isCardInactive(ChoiceCard card, {DateTime? now}) {
   return card.isStamped || isDateExpired(card, now: now);
 }
 
+bool requiresNewDateToReopen(ChoiceCard card, {DateTime? now}) {
+  return isDateExpired(card, now: now);
+}
+
 /// Sort key: sooner end date first; undated last within a group; same
 /// from+to → alphabetical by title. Returns 0 when both undated so callers
 /// can preserve relative order.

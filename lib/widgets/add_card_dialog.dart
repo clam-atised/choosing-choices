@@ -396,6 +396,35 @@ class _AddCardDialogState extends State<AddCardDialog> {
     );
   }
 
+  Widget _buildPhotoEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: AppColours.dark,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.add,
+              color: AppColours.white,
+              size: 18,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add photo',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.alice(fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPhotoPicker({required bool fullWidth}) {
     final width = fullWidth ? double.infinity : _photoColumnWidth;
     final minHeight = fullWidth ? 160.0 : _contentMinHeight;
@@ -412,37 +441,18 @@ class _AddCardDialogState extends State<AddCardDialog> {
           child: SizedBox(
             width: width,
             child: _imagePath == null
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: AppColours.dark,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.add,
-                          color: AppColours.white,
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Add photo',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.alice(fontSize: 14),
-                      ),
-                    ],
-                  )
+                ? _buildPhotoEmptyState()
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: PlatformImage(
                       path: _imagePath!,
                       width: fullWidth ? double.infinity : _photoColumnWidth,
                       fit: BoxFit.cover,
-                      errorWidget: SizedBox(height: minHeight),
+                      errorWidget: SizedBox(
+                        width: width,
+                        height: minHeight,
+                        child: _buildPhotoEmptyState(),
+                      ),
                     ),
                   ),
           ),

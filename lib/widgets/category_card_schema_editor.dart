@@ -50,9 +50,6 @@ class _CategoryCardSchemaEditorState extends State<CategoryCardSchemaEditor> {
 
   Future<void> _onReorder(int oldIndex, int newIndex) async {
     final definitions = [..._definitions];
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
-    }
     final item = definitions.removeAt(oldIndex);
     definitions.insert(newIndex, item);
     await _schemaService.reorderDefinitions(
@@ -195,7 +192,7 @@ class _CategoryCardSchemaEditorState extends State<CategoryCardSchemaEditor> {
               physics: const NeverScrollableScrollPhysics(),
               buildDefaultDragHandles: false,
               itemCount: definitions.length,
-              onReorder: _onReorder,
+              onReorderItem: _onReorder,
               itemBuilder: (context, index) {
                 final definition = definitions[index];
                 return _SchemaDefinitionTile(
