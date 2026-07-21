@@ -11,17 +11,16 @@ import '../utils/card_date_utils.dart';
 import '../utils/detail_field_formatters.dart';
 import 'add_card_dialog.dart';
 import 'card_detail_dialog.dart';
+import 'card_title_header.dart';
 
 class ChoiceCardTile extends StatelessWidget {
   const ChoiceCardTile({
     super.key,
     required this.card,
-    this.onLongPress,
     this.compact = true,
   });
 
   final ChoiceCard card;
-  final VoidCallback? onLongPress;
   final bool compact;
 
   static const Key completedCardKey = Key('card_completed_overlay');
@@ -74,7 +73,12 @@ class ChoiceCardTile extends StatelessWidget {
       return;
     }
 
-    await showCardDetailDialog(context, card: card);
+    await showCardDetailDialog(
+      context,
+      folderId: card.folderId,
+      categoryItemId: card.categoryItemId,
+      initialCardId: card.id,
+    );
   }
 
   @override
@@ -88,7 +92,6 @@ class ChoiceCardTile extends StatelessWidget {
 
     final content = GestureDetector(
       onTap: () => _onCardTap(context),
-      onLongPress: onLongPress,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -101,7 +104,7 @@ class ChoiceCardTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            _CardTitleHeader(
+            CardTitleHeader(
               title: card.title,
               showTick: !inactive,
               titleMaxLines: titleMaxLines,
@@ -169,64 +172,6 @@ class ChoiceCardTile extends StatelessWidget {
       child: Opacity(
         opacity: 0.65,
         child: clipped,
-      ),
-    );
-  }
-}
-
-class _CardTitleHeader extends StatelessWidget {
-  const _CardTitleHeader({
-    required this.title,
-    required this.onTick,
-    required this.showTick,
-    required this.titleMaxLines,
-  });
-
-  final String title;
-  final VoidCallback onTick;
-  final bool showTick;
-  final int titleMaxLines;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColours.dark),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              maxLines: titleMaxLines,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.alice(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          if (showTick)
-            GestureDetector(
-              onTap: onTick,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: AppColours.dark,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check,
-                  color: AppColours.white,
-                  size: 16,
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }

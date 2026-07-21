@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:choices/data/cards_repository.dart';
 import 'package:choices/data/folders_repository.dart';
+import 'package:choices/models/category_item.dart';
 import 'package:choices/models/choice_card.dart';
 import 'package:choices/screens/category_content_screen.dart';
 import 'package:choices/screens/folder_content_screen.dart';
@@ -114,6 +115,113 @@ void main() {
     final nextCategoryTop =
         tester.getTopLeft(find.text('Restaurant recommendations')).dy;
     expect(nextCategoryTop - cardBottom, lessThan(48));
+  });
+
+  testWidgets(
+      'vertical category keeps category name visible while scrolling cards',
+      (WidgetTester tester) async {
+    CardsRepository.instance.clearCardsForTesting();
+    await FoldersRepository.instance.setItemCardDirection(
+      FoldersRepository.seedFolderId,
+      'places_to_visit',
+      CardDisplayDirection.vertical,
+    );
+
+    for (var index = 0; index < 12; index++) {
+      await CardsRepository.instance.addCard(
+        ChoiceCard(
+          id: 'vertical_card_$index',
+          folderId: FoldersRepository.seedFolderId,
+          categoryItemId: 'places_to_visit',
+          title: 'Vertical Card $index',
+          details: const [],
+        ),
+      );
+    }
+
+    tester.view.physicalSize = const Size(390, 700);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: FolderContentScreen(
+          folderId: FoldersRepository.seedFolderId,
+        ),
+      ),
+    );
+    await pumpUi(tester);
+
+    final categoryFinder = find.text('Places to visit');
+    expect(categoryFinder, findsOneWidget);
+    final initialCategoryTop = tester.getTopLeft(categoryFinder).dy;
+
+    final nextCategoryTopBefore =
+        tester.getTopLeft(find.text('Restaurant recommendations')).dy;
+    final cardViewportBottom =
+        tester.getBottomLeft(find.byType(ListView).first).dy;
+    expect(nextCategoryTopBefore - cardViewportBottom, lessThan(48));
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await pumpUi(tester);
+
+    expect(categoryFinder, findsOneWidget);
+    expect(tester.getTopLeft(categoryFinder).dy, initialCategoryTop);
+    expect(find.text('Vertical Card 0'), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('Restaurant recommendations')).dy,
+      nextCategoryTopBefore,
+    );
+  });
+
+  testWidgets(
+      'CategoryContentScreen keeps category name while scrolling vertical cards',
+      (WidgetTester tester) async {
+    CardsRepository.instance.clearCardsForTesting();
+    await FoldersRepository.instance.setItemCardDirection(
+      FoldersRepository.seedFolderId,
+      'places_to_visit',
+      CardDisplayDirection.vertical,
+    );
+
+    for (var index = 0; index < 12; index++) {
+      await CardsRepository.instance.addCard(
+        ChoiceCard(
+          id: 'content_vertical_card_$index',
+          folderId: FoldersRepository.seedFolderId,
+          categoryItemId: 'places_to_visit',
+          title: 'Content Vertical Card $index',
+          details: const [],
+        ),
+      );
+    }
+
+    tester.view.physicalSize = const Size(390, 700);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: CategoryContentScreen(
+          folderId: FoldersRepository.seedFolderId,
+          itemId: 'places_to_visit',
+        ),
+      ),
+    );
+    await pumpUi(tester);
+
+    final categoryFinder = find.text('Places to visit');
+    expect(categoryFinder, findsOneWidget);
+    final initialCategoryTop = tester.getTopLeft(categoryFinder).dy;
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await pumpUi(tester);
+
+    expect(categoryFinder, findsOneWidget);
+    expect(tester.getTopLeft(categoryFinder).dy, initialCategoryTop);
+    expect(find.text('Content Vertical Card 0'), findsNothing);
   });
 
   test('ChoiceCard.fromJson defaults isStamped to false when missing', () {

@@ -41,7 +41,7 @@ Widget centerPhoneWidth({required Widget child}) {
       }
 
       return Align(
-        alignment: Alignment.centerLeft,
+        alignment: Alignment.topLeft,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: kPhoneReferenceWidth),
           child: child,

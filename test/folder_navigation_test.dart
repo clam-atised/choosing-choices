@@ -65,6 +65,33 @@ void main() {
     expect(find.byIcon(Icons.arrow_right), findsWidgets);
   });
 
+  testWidgets('Opening a second category keeps the first open',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: FolderContentScreen(
+          folderId: FoldersRepository.seedFolderId,
+        ),
+      ),
+    );
+    await pumpUi(tester);
+
+    expect(find.byIcon(Icons.arrow_drop_down), findsOneWidget);
+    expect(find.text('Petronas Twin Towers'), findsOneWidget);
+
+    await tester.tap(find.text('Restaurant recommendations'));
+    await pumpUi(tester);
+
+    expect(find.byIcon(Icons.arrow_drop_down), findsNWidgets(2));
+    expect(find.text('Petronas Twin Towers'), findsOneWidget);
+
+    await tester.tap(find.text('Places to visit'));
+    await pumpUi(tester);
+
+    expect(find.byIcon(Icons.arrow_drop_down), findsOneWidget);
+    expect(find.text('Petronas Twin Towers'), findsNothing);
+  });
+
   testWidgets('Folder content stays left-aligned on wide layout',
       (WidgetTester tester) async {
     await TestWidgetsFlutterBinding.ensureInitialized()
@@ -84,5 +111,30 @@ void main() {
 
     final labelX = tester.getTopLeft(find.text('Places to visit')).dx;
     expect(labelX, lessThan(140));
+  });
+
+  testWidgets('Folder content stays left-aligned on Android phone width',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: FolderContentScreen(
+          folderId: FoldersRepository.seedFolderId,
+        ),
+      ),
+    );
+    await pumpUi(tester);
+
+    final placesTopLeft = tester.getTopLeft(find.text('Places to visit'));
+    expect(placesTopLeft.dx, lessThan(80));
+
+    final nextTopLeft =
+        tester.getTopLeft(find.text('Restaurant recommendations'));
+    expect(nextTopLeft.dx, lessThan(80));
+    expect(nextTopLeft.dy, greaterThan(placesTopLeft.dy));
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../data/cards_repository.dart';
@@ -35,8 +37,11 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
   final GlobalKey _addButtonKey = GlobalKey();
   final CardSearchService _searchService = CardSearchService.instance;
 
-  String? _expandedItemId;
+  final Set<String> _expandedItemIds = {};
   FolderSearchState? _searchState;
+
+  String? get _primaryExpandedItemId =>
+      _expandedItemIds.isEmpty ? null : _expandedItemIds.first;
 
   @override
   void initState() {
@@ -48,7 +53,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
   void _initExpandedItem() {
     final folder = FoldersRepository.instance.folderById(widget.folderId);
     if (folder != null && folder.items.isNotEmpty) {
-      _expandedItemId = folder.items.first.id;
+      _expandedItemIds.add(folder.items.first.id);
     }
   }
 
@@ -59,28 +64,38 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
   }
 
   void _onFoldersChanged() {
-    _syncExpandedItem();
+    _syncExpandedItems();
   }
 
-  void _syncExpandedItem() {
+  void _syncExpandedItems() {
     final folder = FoldersRepository.instance.folderById(widget.folderId);
     if (folder == null) {
       return;
     }
 
-    if (_expandedItemId != null &&
-        !folder.items.any((item) => item.id == _expandedItemId)) {
-      final nextExpandedId =
-          folder.items.isNotEmpty ? folder.items.first.id : null;
-      if (nextExpandedId != _expandedItemId) {
-        setState(() => _expandedItemId = nextExpandedId);
-      }
+    final validIds = folder.items.map((item) => item.id).toSet();
+    final pruned = _expandedItemIds.intersection(validIds);
+    if (pruned.length != _expandedItemIds.length) {
+      setState(() {
+        _expandedItemIds
+          ..clear()
+          ..addAll(pruned);
+        if (_expandedItemIds.isEmpty && folder.items.isNotEmpty) {
+          _expandedItemIds.add(folder.items.first.id);
+        }
+      });
+    } else if (_expandedItemIds.isEmpty && folder.items.isNotEmpty) {
+      setState(() => _expandedItemIds.add(folder.items.first.id));
     }
   }
 
   void _toggleExpanded(String itemId) {
     setState(() {
-      _expandedItemId = _expandedItemId == itemId ? null : itemId;
+      if (_expandedItemIds.contains(itemId)) {
+        _expandedItemIds.remove(itemId);
+      } else {
+        _expandedItemIds.add(itemId);
+      }
     });
   }
 
@@ -166,7 +181,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     final result = await showFolderSearchDialog(
       context,
       folderId: widget.folderId,
-      initialCategoryId: _expandedItemId,
+      initialCategoryId: _primaryExpandedItemId,
       initialState: _searchState,
     );
     if (!mounted || result == null) {
@@ -176,7 +191,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     setState(() {
       _searchState = result.isActive ? result : null;
       if (result.isDetailSearchActive && result.selectedCategoryId != null) {
-        _expandedItemId = result.selectedCategoryId;
+        _expandedItemIds.add(result.selectedCategoryId!);
       }
     });
   }
@@ -195,7 +210,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     }
 
     if (result.folderId == widget.folderId) {
-      setState(() => _expandedItemId = result.itemId);
+      setState(() => _expandedItemIds.add(result.itemId));
       await showAddCardDialog(
         context,
         folderId: widget.folderId,
@@ -218,7 +233,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
       return;
     }
 
-    final initialItemId = _expandedItemId ?? folder.items.first.id;
+    final initialItemId = _primaryExpandedItemId ?? folder.items.first.id;
     await showAddCardDialog(
       context,
       folderId: widget.folderId,
@@ -271,27 +286,59 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
       );
     }
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final item in folder.items) ...[
-            _CategorySectionHeader(
-              name: item.name,
-              isExpanded: _expandedItemId == item.id,
-              onToggle: () => _toggleExpanded(item.id),
-            ),
-            if (_expandedItemId == item.id)
-              CategoryCardCarousel(
-                folderId: widget.folderId,
-                categoryItemId: item.id,
-                displayDirection: _effectiveDirection(item),
-                filteredCards: _filteredCardsForItem(item),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final verticalCardsHeight = math.max(
+          0.0,
+          constraints.maxHeight -
+              (2 * _CategorySectionHeaderDelegate.extent),
+        );
+
+        return CustomScrollView(
+          slivers: [
+            for (final item in folder.items) ...[
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _CategorySectionHeaderDelegate(
+                  name: item.name,
+                  isExpanded: _expandedItemIds.contains(item.id),
+                  onToggle: () => _toggleExpanded(item.id),
+                ),
               ),
+              if (_expandedItemIds.contains(item.id))
+                SliverToBoxAdapter(
+                  child: _buildExpandedCarousel(
+                    item: item,
+                    verticalCardsHeight: verticalCardsHeight,
+                  ),
+                ),
+            ],
           ],
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  Widget _buildExpandedCarousel({
+    required CategoryItem item,
+    required double verticalCardsHeight,
+  }) {
+    final direction = _effectiveDirection(item);
+    final carousel = CategoryCardCarousel(
+      folderId: widget.folderId,
+      categoryItemId: item.id,
+      displayDirection: direction,
+      filteredCards: _filteredCardsForItem(item),
+    );
+
+    if (direction == CardDisplayDirection.vertical) {
+      return SizedBox(
+        height: verticalCardsHeight,
+        child: carousel,
+      );
+    }
+
+    return carousel;
   }
 
   @override
@@ -333,8 +380,8 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
   }
 }
 
-class _CategorySectionHeader extends StatelessWidget {
-  const _CategorySectionHeader({
+class _CategorySectionHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _CategorySectionHeaderDelegate({
     required this.name,
     required this.isExpanded,
     required this.onToggle,
@@ -344,44 +391,69 @@ class _CategorySectionHeader extends StatelessWidget {
   final bool isExpanded;
   final VoidCallback onToggle;
 
+  static const double extent = 44;
+
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: kCardHorizontalPadding),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: onToggle,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 4, top: 4, bottom: 4),
-              child: Icon(
-                isExpanded ? Icons.arrow_drop_down : Icons.arrow_right,
-                color: AppColours.white,
-                size: 28,
-              ),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: onToggle,
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.alice(
-                    fontSize: 20,
+  double get minExtent => extent;
+
+  @override
+  double get maxExtent => extent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return SizedBox(
+      height: extent,
+      child: Material(
+        color: AppColours.dark,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: kCardHorizontalPadding),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: onToggle,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 4, top: 4, bottom: 4),
+                  child: Icon(
+                    isExpanded ? Icons.arrow_drop_down : Icons.arrow_right,
                     color: AppColours.white,
+                    size: 28,
                   ),
                 ),
               ),
-            ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: onToggle,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.alice(
+                        fontSize: 20,
+                        color: AppColours.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
+  }
+
+  @override
+  bool shouldRebuild(covariant _CategorySectionHeaderDelegate oldDelegate) {
+    return oldDelegate.name != name ||
+        oldDelegate.isExpanded != isExpanded ||
+        oldDelegate.onToggle != onToggle;
   }
 }

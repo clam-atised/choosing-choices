@@ -30,7 +30,7 @@ void main() {
     await pumpUi(tester);
   }
 
-  testWidgets('long press shows edit and delete actions', (tester) async {
+  testWidgets('tap shows edit and delete actions', (tester) async {
     await CardsRepository.instance.addCard(
       const ChoiceCard(
         id: 'card_1',
@@ -42,7 +42,7 @@ void main() {
 
     await pumpCarousel(tester);
 
-    await tester.longPress(find.text('Ramen shop'));
+    await tester.tap(find.text('Ramen shop'));
     await pumpUi(tester);
 
     expect(find.byTooltip('Edit card'), findsOneWidget);
@@ -61,7 +61,7 @@ void main() {
 
     await pumpCarousel(tester);
 
-    await tester.longPress(find.text('Ramen shop'));
+    await tester.tap(find.text('Ramen shop'));
     await pumpUi(tester);
     await tester.tap(find.byTooltip('Edit card'));
     await pumpUi(tester);
@@ -83,7 +83,7 @@ void main() {
 
     await pumpCarousel(tester);
 
-    await tester.longPress(find.text('Ramen shop'));
+    await tester.tap(find.text('Ramen shop'));
     await pumpUi(tester);
     await tester.tap(find.byTooltip('Edit card'));
     await pumpUi(tester);
@@ -112,17 +112,14 @@ void main() {
 
     await pumpCarousel(tester);
 
-    await tester.longPress(find.text('Ramen shop'));
+    await tester.tap(find.text('Ramen shop'));
     await pumpUi(tester);
     await tester.tap(find.byTooltip('Delete card'));
     await pumpUi(tester);
 
-    expect(
-      find.text('Are you sure you want to delete this card?'),
-      findsOneWidget,
-    );
+    expect(find.text('Delete forever?'), findsOneWidget);
 
-    await tester.tap(find.text('Delete').last);
+    await tester.tap(find.text('Yes'));
     await pumpUi(tester);
 
     expect(CardsRepository.instance.cards, isEmpty);
